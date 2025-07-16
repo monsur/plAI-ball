@@ -47,5 +47,7 @@ def run(args):
         save_data(boxscore_url.replace("boxscore", "recap"), "recap")
         time.sleep(args.delay)
 
+    return len(boxscore_urls)
+
 if __name__ == "__main__":
     run(args_helper.get_args())

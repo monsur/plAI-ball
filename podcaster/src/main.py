@@ -2,7 +2,9 @@ from podcaster.src import args_helper, archive, audio, data, prompt, rss, transc
 
 def main():
     args = args_helper.get_args()
-    data.run(args)
+    filecount = data.run(args)
+    if (filecount == 0):
+        return
     prompt.run(args)
     transcript.run(args)
     audio.run(args)
