@@ -39,5 +39,5 @@ jobs:
         run: |
           git config --global user.name 'Monsur Hossain'
           git config --global user.email 'monsur@gmail.com'
-          git commit -am "Publish rss.xml"
+          git commit -am "Publish rss.xml" || true
           git push || true
