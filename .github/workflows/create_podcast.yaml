@@ -3,9 +3,9 @@
 name: Create Podcast
 run-name: "Creating Podcast"
 
-on: workflow_dispatch
-#  schedule:
-#    - cron: "0 10 * * *"
+on:
+  schedule:
+    - cron: "0 10 * * *"
 
 jobs:
   Create-Podcast:
