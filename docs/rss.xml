@@ -34,6 +34,31 @@
     full
    </itunes:episodeType>
    <title>
+    plAI ball! Monday, August 25, 2025
+   </title>
+   <description>
+    AI-curated MLB highlights for games on Monday, August 25, 2025
+   </description>
+   <guid>
+    20250825
+   </guid>
+   <pubDate>
+    Tue, 26 Aug 2025 10:27:30
+   </pubDate>
+   <itunes:duration>
+    232
+   </itunes:duration>
+   <itunes:explicit>
+    false
+   </itunes:explicit>
+   <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20250825-transcript.txt"/>
+   <enclosure length="3721728" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20250825-audio.mp3"/>
+  </item>
+  <item>
+   <itunes:episodeType>
+    full
+   </itunes:episodeType>
+   <title>
     plAI ball! Sunday, August 24, 2025
    </title>
    <description>
@@ -178,31 +203,6 @@
    </itunes:explicit>
    <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20250819-transcript.txt"/>
    <enclosure length="5475456" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20250819-audio.mp3"/>
-  </item>
-  <item>
-   <itunes:episodeType>
-    full
-   </itunes:episodeType>
-   <title>
-    plAI ball! Monday, August 18, 2025
-   </title>
-   <description>
-    AI-curated MLB highlights for games on Monday, August 18, 2025
-   </description>
-   <guid>
-    20250818
-   </guid>
-   <pubDate>
-    Tue, 19 Aug 2025 10:27:51
-   </pubDate>
-   <itunes:duration>
-    288
-   </itunes:duration>
-   <itunes:explicit>
-    false
-   </itunes:explicit>
-   <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20250818-transcript.txt"/>
-   <enclosure length="4620288" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20250818-audio.mp3"/>
   </item>
  </channel>
 </rss>
