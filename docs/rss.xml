@@ -34,6 +34,31 @@
     full
    </itunes:episodeType>
    <title>
+    plAI ball! Tuesday, September 16, 2025
+   </title>
+   <description>
+    AI-curated MLB highlights for games on Tuesday, September 16, 2025
+   </description>
+   <guid>
+    20250916
+   </guid>
+   <pubDate>
+    Wed, 17 Sep 2025 10:25:35
+   </pubDate>
+   <itunes:duration>
+    279
+   </itunes:duration>
+   <itunes:explicit>
+    false
+   </itunes:explicit>
+   <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20250916-transcript.txt"/>
+   <enclosure length="4468992" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20250916-audio.mp3"/>
+  </item>
+  <item>
+   <itunes:episodeType>
+    full
+   </itunes:episodeType>
+   <title>
     plAI ball! Monday, September 15, 2025
    </title>
    <description>
@@ -178,31 +203,6 @@
    </itunes:explicit>
    <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20250910-transcript.txt"/>
    <enclosure length="5189760" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20250910-audio.mp3"/>
-  </item>
-  <item>
-   <itunes:episodeType>
-    full
-   </itunes:episodeType>
-   <title>
-    plAI ball! Tuesday, September 09, 2025
-   </title>
-   <description>
-    AI-curated MLB highlights for games on Tuesday, September 09, 2025
-   </description>
-   <guid>
-    20250909
-   </guid>
-   <pubDate>
-    Wed, 10 Sep 2025 10:25:43
-   </pubDate>
-   <itunes:duration>
-    294
-   </itunes:duration>
-   <itunes:explicit>
-    false
-   </itunes:explicit>
-   <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20250909-transcript.txt"/>
-   <enclosure length="4715520" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20250909-audio.mp3"/>
   </item>
  </channel>
 </rss>
