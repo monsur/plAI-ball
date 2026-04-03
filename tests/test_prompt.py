@@ -1,4 +1,4 @@
-"""Tests for podcaster.src.prompt — HTML cleaning and prompt assembly."""
+"""Tests for podcaster.src.prompt — structured data extraction and prompt assembly."""
 
 from pathlib import Path
 from tests.conftest import read_fixture
@@ -6,225 +6,103 @@ from podcaster.src.prompt import run
 
 
 class TestProcessBoxscore:
-    """Test the HTML cleaning logic in process_boxscore_file."""
+    """Test the structured text extraction from ESPN boxscore HTML."""
 
-    def _process_boxscore(self, html):
-        """Helper: replicate the boxscore processing logic from prompt.py."""
-        from bs4 import BeautifulSoup, Comment
+    def _run_and_get_output(self, mock_args, boxscore_fixture="boxscore.html", recap_fixture=None):
+        """Helper: write fixture(s) into mock data dir, run(), return prompt text."""
+        html = read_fixture(boxscore_fixture)
+        (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(html)
+        if recap_fixture:
+            recap = read_fixture(recap_fixture)
+            (Path(mock_args.output_data_dir) / "401234567-recap.html").write_text(recap)
+        run(mock_args)
+        return (Path(mock_args.output_dir) / "prompt.txt").read_text()
 
-        soup = BeautifulSoup(html, "html.parser")
+    def test_extracts_game_title(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "Chicago Cubs @ Pittsburgh Pirates" in content
 
-        for tag in soup.find_all(["script", "style", "link", "img", "svg",
-                                  "head", "nav", "button", "footer",
-                                  "picture", "source", "colgroup"]):
-            tag.decompose()
+    def test_extracts_line_score(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "Line Score:" in content
+        assert "CHC" in content
+        assert "PIT" in content
+        # Check R/H/E totals for Cubs
+        assert "8" in content
+        assert "12" in content
 
-        for comment in soup.find_all(
-            string=lambda text: isinstance(text, Comment)
-        ):
-            comment.extract()
+    def test_extracts_pitching_decisions(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "Pitching Decisions:" in content
+        assert "W: J. Steele" in content
+        assert "L: M. Keller" in content
 
-        selectors = [
-            "div.HeaderScoreboardWrapper",
-            "div.PageLayout.page-container.cf.page-footer-container",
-            "div#fittOverlayContainer",
-            "div#fittBGContainer",
-            "div#lightboxContainer",
-            "header.db.Site__Header__Wrapper.sticky",
-            '[data-testid="GameSwitcher"]',
-            "#BloomPortalId",
-            '[id*="taboola"]',
-        ]
-        for sel in selectors:
-            for tag in soup.select(sel):
-                tag.decompose()
+    def test_extracts_batting_stats(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "Chicago Cubs Hitting:" in content
+        assert "D. Swanson SS:" in content
+        assert "S. Suzuki C:" in content
+        assert "AB:5" in content  # Swanson's at-bats
+        assert "HR:1" in content  # Swanson's homer
 
-        for section in soup.find_all("section"):
-            header = section.find("header")
-            if header:
-                h3 = header.find("h3")
-                if h3 and any(
-                    x in h3.text for x in ["MLB News", "Videos", "Game Information"]
-                ):
-                    section.decompose()
+    def test_extracts_opposing_batting_stats(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "B. Reynolds CF:" in content
+        assert "K. Hayes 3B:" in content
 
-        for tag in soup.find_all(True):
-            tag.attrs = {}
+    def test_extracts_pitching_stats(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "Chicago Cubs Pitching:" in content
+        assert "J. Steele ( W, 3-0 ):" in content
+        assert "IP:6.0" in content
+        assert "K:8" in content
 
-        changed = True
-        while changed:
-            changed = False
-            for tag in soup.find_all(True):
-                if tag.name not in ['br', 'hr', 'td', 'th', 'tr', 'col'] and not tag.get_text(strip=True) and not tag.find_all(True):
-                    tag.decompose()
-                    changed = True
+    def test_extracts_scoring_summary(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "Scoring Summary:" in content
+        assert "Swanson homered to left (410 feet)." in content
+        assert "Suzuki homered to center (390 feet), 2 RBI." in content
+        assert "Bellinger doubled to right, Tucker scored and Happ scored." in content
 
-        content = str(soup)
-        lines = [line for line in content.split("\n") if line.strip()]
-        return "\n".join(lines)
+    def test_scoring_summary_has_running_score(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        # Check that scores appear in parentheses
+        assert "(0-1)" in content  # first Pirates run
+        assert "(5-3)" in content  # Cubs take lead
 
-    def test_removes_script_tags(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<script>" not in result
-        assert "var x = 1" not in result
+    def test_output_is_plain_text_not_html(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "<table" not in content
+        assert "<div" not in content
+        assert "<span" not in content
+        assert "<script" not in content
+        assert "<style" not in content
+        assert "<nav" not in content
 
-    def test_removes_style_tags(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<style>" not in result
-        assert ".foo { color: red; }" not in result
+    def test_no_html_attributes_in_output(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert 'class=' not in content
+        assert 'style=' not in content
+        assert 'data-testid=' not in content
+        assert 'href=' not in content
+        assert 'aria-' not in content
 
-    def test_removes_link_img_svg_tags(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<link" not in result
-        assert "<img" not in result
-        assert "<svg>" not in result
+    def test_excludes_chrome_content(self, mock_args):
+        """ESPN page chrome (nav, ads, news, etc.) should not appear."""
+        content = self._run_and_get_output(mock_args)
+        assert "Scoreboard Banner" not in content
+        assert "Site Navigation" not in content
+        assert "Bloom content" not in content
+        assert "Taboola ads" not in content
+        assert "Some unrelated MLB news content" not in content
+        assert "Video content" not in content
+        assert "Game info content" not in content
+        assert "Page Footer" not in content
+        assert "espncdn.com" not in content
 
-    def test_removes_html_comments(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "This is an HTML comment" not in result
-
-    def test_removes_header_scoreboard_wrapper(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Scoreboard Banner" not in result
-
-    def test_removes_site_header(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Site Navigation" not in result
-
-    def test_removes_overlay_containers(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Overlay" not in result
-        assert "Background" not in result
-        assert "Lightbox" not in result
-
-    def test_removes_page_footer(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Page Footer" not in result
-
-    def test_removes_head_section(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<head>" not in result
-        assert "Full box score for Cubs vs Pirates" not in result
-
-    def test_removes_nav_elements(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<nav" not in result
-        assert "Gamecast" not in result
-        assert "Secondary Navigation" not in result
-
-    def test_removes_button_elements(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<button" not in result
-        assert "GameSwitcherPill" not in result
-
-    def test_removes_footer_elements(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<footer" not in result
-        assert "Full Play-By-Play" not in result
-
-    def test_removes_picture_and_source_tags(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<picture" not in result
-        assert "<source" not in result
-        assert "srcset" not in result
-        assert "espncdn.com" not in result
-
-    def test_removes_colgroup_tags(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "<colgroup" not in result
-        assert "<col" not in result
-
-    def test_removes_game_switcher(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "GameSwitcher" not in result
-        assert "Game 1" not in result
-
-    def test_removes_bloom_portal(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "BloomPortalId" not in result
-        assert "Bloom content" not in result
-
-    def test_removes_taboola(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "taboola" not in result
-        assert "Taboola ads" not in result
-
-    def test_strips_all_attributes(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert 'class=' not in result
-        assert 'style=' not in result
-        assert 'data-react-helmet=' not in result
-        assert 'lang=' not in result
-        assert 'data-testid=' not in result
-        assert 'data-idx=' not in result
-        assert 'data-player-uid=' not in result
-        assert 'data-clubhouse-uid=' not in result
-        assert 'href=' not in result
-        assert 'tabindex=' not in result
-        assert 'aria-' not in result
-
-    def test_removes_empty_wrapper_divs(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "empty-wrapper" not in result
-
-    def test_removes_mlb_news_section(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Some unrelated MLB news content" not in result
-
-    def test_removes_videos_section(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Video content" not in result
-
-    def test_removes_game_information_section(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Game info content" not in result
-
-    def test_keeps_scoring_summary_section(self):
-        """Sections with headers not in the removal list should be kept."""
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "This section should remain" in result
-
-    def test_preserves_boxscore_table_data(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Chicago Cubs" in result
-        assert "Pittsburgh Pirates" in result
-
-    def test_preserves_gameplay_content(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Swanson HR" in result
-        assert "Suzuki 2-run HR" in result
-
-    def test_removes_empty_lines(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        lines = result.split("\n")
-        for line in lines:
-            assert line.strip() != "", f"Found empty line in output"
+    def test_includes_team_totals(self, mock_args):
+        content = self._run_and_get_output(mock_args)
+        assert "TEAM:" in content
 
 
 class TestProcessRecap:
@@ -299,7 +177,6 @@ class TestPromptRun:
 
         (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(boxscore_html)
 
-        # No recap file written — should not crash
         run(mock_args)
 
         prompt_path = Path(mock_args.output_dir) / "prompt.txt"
@@ -330,12 +207,12 @@ class TestPromptRun:
         assert not prompt_path.exists()
 
     def test_run_creates_individual_prompt_files(self, mock_args):
-        """run() should also create per-game -prompt.html files in the data dir."""
+        """run() should create per-game -prompt.txt files in the data dir."""
         boxscore_html = read_fixture("boxscore.html")
 
         (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(boxscore_html)
 
         run(mock_args)
 
-        prompt_file = Path(mock_args.output_data_dir) / "401234567-prompt.html"
+        prompt_file = Path(mock_args.output_data_dir) / "401234567-prompt.txt"
         assert prompt_file.exists()

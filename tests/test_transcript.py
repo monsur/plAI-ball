@@ -13,7 +13,7 @@ class TestGetClient:
 
         with patch("podcaster.src.transcript.OpenAIAPI") as mock_cls:
             get_client("OpenAI")
-            mock_cls.assert_called_once_with("gpt-5.4-nano")
+            mock_cls.assert_called_once_with("gpt-5.4-mini")
 
     def test_gemini_shorthand_resolves_to_default_model(self):
         from podcaster.src.transcript import get_client
@@ -113,5 +113,5 @@ class TestTranscriptRun:
         system_instructions = mock_client.get_response.call_args[0][1]
         assert "Abe" in system_instructions
         assert "Play Ball!" in system_instructions
-        assert "1000 words" in system_instructions
+        assert "1500 words" in system_instructions
         assert "## GAME ##" in system_instructions

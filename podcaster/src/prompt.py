@@ -1,5 +1,5 @@
 from pathlib import Path
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup
 from podcaster.src import args_helper
 from podcaster.src import logger_helper
 
@@ -8,67 +8,122 @@ logger = logger_helper.get_logger(__name__)
 def run(args):
 
     def process_boxscore_file(filename):
+        """Extract structured plain text from an ESPN boxscore HTML page."""
         logger.info(f"Processing {filename}")
         content = (Path(args.output_data_dir) / filename).read_text(encoding='utf-8')
         soup = BeautifulSoup(content, 'html.parser')
+        lines = []
 
-        # Remove unwanted tags in one go
-        for tag in soup.find_all(['script', 'style', 'link', 'img', 'svg',
-                                  'head', 'nav', 'button', 'footer',
-                                  'picture', 'source', 'colgroup']):
-            tag.decompose()
+        # Game title from h1 (e.g. "Athletics @ Atlanta Braves")
+        h1 = soup.find('h1')
+        if h1:
+            lines.append(h1.get_text(strip=True))
 
-        # Remove HTML comments
-        for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
-            comment.extract()
+        # Team abbreviations from the first table (label column)
+        team_abbrevs = []
+        first_table = soup.find('table')
+        if first_table:
+            for row in first_table.find_all('tr'):
+                cell_text = row.get_text(strip=True)
+                if cell_text:
+                    team_abbrevs.append(cell_text)
 
-        # Remove specific containers using CSS selectors
-        selectors = [
-            'div.HeaderScoreboardWrapper',
-            'div.PageLayout.page-container.cf.page-footer-container',
-            'div#fittOverlayContainer',
-            'div#fittBGContainer',
-            'div#lightboxContainer',
-            'header.db.Site__Header__Wrapper.sticky',
-            '[data-testid="GameSwitcher"]',
-            '#BloomPortalId',
-            '[id*="taboola"]',
-        ]
-        for sel in selectors:
-            for tag in soup.select(sel):
-                tag.decompose()
+        # Line score from the table with inning headers (1,2,3...R,H,E)
+        for table in soup.find_all('table'):
+            headers = [th.get_text(strip=True) for th in table.find_all('th')]
+            if '1' in headers and 'R' in headers:
+                lines.append("")
+                lines.append("Line Score:")
+                header_str = "     " + "  ".join(f"{h:>3}" for h in headers)
+                lines.append(header_str)
+                data_rows = [tr for tr in table.find_all('tr') if tr.find('td')]
+                for i, row in enumerate(data_rows):
+                    cells = [td.get_text(strip=True) for td in row.find_all('td')]
+                    team = team_abbrevs[i] if i < len(team_abbrevs) else "???"
+                    row_str = f"{team:>4} " + "  ".join(f"{c:>3}" for c in cells)
+                    lines.append(row_str)
+                break
 
-        # Remove certain sections by header text
-        for section in soup.find_all("section"):
-            header = section.find("header")
-            if header:
-                h3 = header.find("h3")
-                if h3 and any(x in h3.text for x in ["MLB News", "Videos", "Game Information"]):
-                    section.decompose()
+        # Win/Loss/Save pitchers
+        decisions = []
+        for span in soup.find_all('span'):
+            label = span.get_text(strip=True)
+            if label in ('win', 'loss', 'save'):
+                parent = span.parent
+                while parent and parent.name != 'a':
+                    parent = parent.parent
+                if parent:
+                    text = parent.get_text(' ', strip=True)
+                    # Remove the label word from the text
+                    text = text.replace(f'{label} ', '', 1).strip()
+                    prefix = {'win': 'W', 'loss': 'L', 'save': 'S'}[label]
+                    decisions.append(f"  {prefix}: {text}")
+        if decisions:
+            lines.append("")
+            lines.append("Pitching Decisions:")
+            lines.extend(decisions)
 
-        # Strip all attributes from all tags — they add bulk but no useful content
-        for tag in soup.find_all(True):
-            tag.attrs = {}
+        # Batting and pitching tables from sections
+        sections = soup.find_all('section')
+        for section in sections:
+            label_div = section.find('div', string=lambda t: t and ('Hitting' in t or 'Pitching' in t))
+            if not label_div:
+                continue
 
-        # Remove empty tags (divs, spans, etc. with no text content)
-        changed = True
-        while changed:
-            changed = False
-            for tag in soup.find_all(True):
-                if tag.name not in ['br', 'hr', 'td', 'th', 'tr', 'col'] and not tag.get_text(strip=True) and not tag.find_all(True):
-                    tag.decompose()
-                    changed = True
+            label = label_div.get_text(strip=True)
+            lines.append("")
+            lines.append(f"{label}:")
 
-        # Get the HTML content
-        if args.prettyprint:
-            content = soup.prettify()
-        else:
-            content = str(soup)
-            # Remove empty lines
-            lines = [line for line in content.split('\n') if line.strip()]
-            content = '\n'.join(lines)
+            tables = section.find_all('table')
+            # Tables come in pairs: names table + stats table
+            for j in range(0, len(tables), 2):
+                names_table = tables[j]
+                stats_table = tables[j + 1] if j + 1 < len(tables) else None
+                if not stats_table:
+                    continue
 
-        return content
+                headers = [th.get_text(strip=True) for th in stats_table.find_all('th')]
+                name_rows = names_table.find_all('tr')[1:]  # skip header
+                stat_rows = stats_table.find_all('tr')[1:]  # skip header
+
+                for name_row, stat_row in zip(name_rows, stat_rows):
+                    name = name_row.get_text(' ', strip=True)
+                    cells = [td.get_text(strip=True) for td in stat_row.find_all('td')]
+                    if name.lower() == 'team' or name.lower() == 'totals':
+                        stats_str = ", ".join(f"{h}:{c}" for h, c in zip(headers, cells))
+                        lines.append(f"  TEAM: {stats_str}")
+                    else:
+                        stats_str = ", ".join(f"{h}:{c}" for h, c in zip(headers, cells))
+                        lines.append(f"  {name}: {stats_str}")
+
+        # Scoring summary — parse the table with columns: [empty, empty, inning, play, away_score, home_score]
+        for section in sections:
+            heading = section.find('div', string=lambda t: t and 'Scoring Summary' in t)
+            if not heading:
+                header_el = section.find('header')
+                if header_el:
+                    h3 = header_el.find('h3')
+                    if h3 and 'Scoring Summary' in h3.get_text():
+                        heading = h3
+            if heading:
+                lines.append("")
+                lines.append("Scoring Summary:")
+                table = section.find('table')
+                if table:
+                    for row in table.find_all('tr'):
+                        cells = [td.get_text(strip=True) for td in row.find_all('td')]
+                        if not cells:
+                            continue
+                        # Filter out empty cells; typically: ['', '', '2nd', 'play description', '0', '2']
+                        non_empty = [c for c in cells if c]
+                        if len(non_empty) >= 3:
+                            inning = non_empty[0]
+                            play = non_empty[1]
+                            score = f"{non_empty[2]}-{non_empty[3]}" if len(non_empty) >= 4 else ""
+                            lines.append(f"  {inning}: {play} ({score})")
+                break
+
+        return "\n".join(lines)
 
     def process_recap_file(filename):
         logger.info(f"Processing {filename}")
@@ -80,16 +135,16 @@ def run(args):
         content = process_boxscore_file(filename)
 
         try:
-            content += "<recap>" + process_recap_file(filename.replace("boxscore", "recap")) + "</recap>"
+            content += "\n\n<recap>\n" + process_recap_file(filename.replace("boxscore", "recap")) + "\n</recap>"
         except Exception as e:
             logger.warning("No recap for %s: %s", filename, e)
 
-        (Path(args.output_data_dir) / filename.replace("boxscore", "prompt")).write_text(content, encoding='utf-8')
+        (Path(args.output_data_dir) / filename.replace("boxscore.html", "prompt.txt")).write_text(content, encoding='utf-8')
 
         return content
 
     data_dir = Path(args.output_data_dir)
-    files = [f.name for f in data_dir.iterdir() if f.name.endswith('boxscore.html')]
+    files = sorted(f.name for f in data_dir.iterdir() if f.name.endswith('boxscore.html'))
 
     if not files:
         logger.error("No HTML files found in input directory.")

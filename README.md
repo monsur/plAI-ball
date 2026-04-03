@@ -113,7 +113,7 @@ uv run python -m podcaster.src.archive --date 20250501
 - **Pick a date you know had games** — off-season dates will return zero games.
 - **Inspect intermediate files** in `podcaster/output/<date>/`:
   - `data/*.html` — raw ESPN HTML (stage 1)
-  - `data/*-prompt.html` — cleaned HTML per game (stage 2)
+  - `data/*-prompt.txt` — extracted game data per game (stage 2)
   - `prompt.txt` — combined AI prompt (stage 2)
   - `<date>-transcript.txt` — generated transcript (stage 3)
   - `<date>-audio.mp3` — generated podcast audio (stage 4)
