@@ -1,8 +1,11 @@
+import logging
 import os
 import shutil
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 def getenv(envvar):
     return os.getenv(envvar)
@@ -15,7 +18,7 @@ def read_file(*args):
         with open(join(*args), 'r', encoding='utf-8') as f:
             return f.read()
     except Exception as e:
-        print(f"File not found: {e}")
+        logger.error("File not found: %s", e)
         return None
 
 def write_file(content, *args):
@@ -33,4 +36,4 @@ def make_dir(path, clean=False):
                 elif os.path.isdir(item_path):
                     shutil.rmtree(item_path)
             except Exception as e:
-                print(f"Error deleting {item_path}: {e}")
+                logger.error("Error deleting %s: %s", item_path, e)

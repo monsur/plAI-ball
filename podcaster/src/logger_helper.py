@@ -1,5 +1,3 @@
-# TODO: pretty this up and use it properly
-
 import logging
 import os
 import sys
@@ -8,7 +6,8 @@ from podcaster.src import args_helper
 
 LOG_LEVEL = logging.INFO
 _logger = None
-_log_identifier = None  # Store the log identifier
+_log_identifier = None
+
 
 def initialize_logger(log_identifier=None):
     global _logger
@@ -23,23 +22,25 @@ def initialize_logger(log_identifier=None):
         _log_identifier = log_identifier
 
     args = args_helper.get_args()
-    LOG_FILE = os.path.join(args.output_log_dir, f"{_log_identifier}.log")
+    log_file = os.path.join(args.output_log_dir, f"{_log_identifier}.log")
 
     logging.basicConfig(
         level=LOG_LEVEL,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(sys.stderr),
-            logging.FileHandler(LOG_FILE)
+            logging.FileHandler(log_file)
         ]
     )
     _logger = logging.getLogger()
     return _logger
 
+
 def get_logger(name):
     if not _logger:
-        initialize_logger()  # Initialize with a default if not already done
+        initialize_logger()
     return logging.getLogger(name)
+
 
 def get_log_identifier():
     return _log_identifier

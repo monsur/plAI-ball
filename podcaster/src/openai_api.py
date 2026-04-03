@@ -1,5 +1,8 @@
 from openai import OpenAI
+from podcaster.src import logger_helper
 from podcaster.src import os_helper
+
+logger = logger_helper.get_logger(__name__)
 
 class OpenAIAPI:
    def __init__(self, model):
@@ -23,5 +26,5 @@ class OpenAIAPI:
             ], temperature=self.temperature)
          return response.choices[0].message.content
       except Exception as e:
-         print(f"Error generating summary: {e}")
+         logger.exception("Error generating summary")
          return None

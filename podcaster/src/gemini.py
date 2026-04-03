@@ -1,6 +1,9 @@
 from google import genai
 from google.genai import types
+from podcaster.src import logger_helper
 from podcaster.src import os_helper
+
+logger = logger_helper.get_logger(__name__)
 
 class Gemini:
     def __init__(self, model):
@@ -20,5 +23,5 @@ class Gemini:
             )
             return response.text
         except Exception as e:
-            print(f"Error generating summary: {e}")
+            logger.exception("Error generating summary")
             return None

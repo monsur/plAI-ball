@@ -83,7 +83,7 @@ def run(args):
         try:
             content += "<recap>" + process_recap_file(filename.replace("boxscore", "recap")) + "</recap>"
         except Exception as e:
-            logger.info(f"No recap for {filename}")
+            logger.warning("No recap for %s: %s", filename, e)
 
         os_helper.write_file(content, args.output_data_dir, filename.replace("boxscore", "prompt"))
 
