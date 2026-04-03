@@ -56,19 +56,14 @@ uv sync --all-extras
 
 ### API keys
 
-Create a `.env` file in the project root with the following keys:
+Copy the example env file and fill in your keys:
 
-```
-# Required for transcript generation (at least one)
-OPENAI_API_KEY=sk-...
-GEMINI_API_KEY=...
-
-# Required for S3 upload (stages 5-6)
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
+```bash
+cp .env.example .env
 ```
 
-Stages 1-2 (scraping and prompt building) don't require any API keys.
+See [`.env.example`](.env.example) for all available keys. Stages 1-2 (scraping
+and prompt building) don't require any API keys.
 
 ## Running locally
 
