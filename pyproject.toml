@@ -1,0 +1,24 @@
+[project]
+name = "plai-ball"
+version = "1.0.0"
+description = "An AI-generated baseball podcast"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.12.2",
+    "boto3>=1.38.9",
+    "google-genai>=1.13.0",
+    "html-to-json>=2.0.0",
+    "lxml>=5.4.0",
+    "mutagen>=1.47.0",
+    "openai>=1.76.2",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

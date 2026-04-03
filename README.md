@@ -33,6 +33,96 @@ directory for examples of the transcript and podcast.
 
 And of course, that logo was generated using Gemini!
 
+## Setup
+
+### Prerequisites
+
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) for dependency management
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/monsur/plAI-ball.git
+cd plAI-ball
+
+# Install uv (if you don't have it)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv sync --all-extras
+```
+
+### API keys
+
+Create a `.env` file in the project root with the following keys:
+
+```
+# Required for transcript generation (at least one)
+OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=...
+
+# Required for S3 upload (stages 5-6)
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+Stages 1-2 (scraping and prompt building) don't require any API keys.
+
+## Running locally
+
+### Full pipeline
+
+```bash
+# Run the full pipeline (defaults to yesterday's games)
+uv run python -m podcaster.src.main
+
+# Or run with a specific date
+uv run python -m podcaster.src.main --date 20250501
+```
+
+### Running stages individually
+
+Each pipeline stage can be run independently. Stages write intermediate files to
+`podcaster/output/<date>/`, so you can run them one at a time and inspect the
+output before moving on.
+
+```bash
+# Stage 1: Fetch ESPN box scores and recaps (no API keys needed)
+uv run python -m podcaster.src.data --date 20250501
+
+# Stage 2: Clean HTML and build the AI prompt (no API keys needed)
+uv run python -m podcaster.src.prompt --date 20250501
+# Use --prettyprint for readable HTML output, useful for debugging
+uv run python -m podcaster.src.prompt --date 20250501 --prettyprint
+
+# Stage 3: Generate transcript via AI (requires OPENAI_API_KEY or GEMINI_API_KEY)
+uv run python -m podcaster.src.transcript --date 20250501 --model OpenAI
+
+# Stage 4: Convert transcript to MP3 (requires OPENAI_API_KEY)
+uv run python -m podcaster.src.audio --date 20250501
+
+# Stage 5: Update RSS feed and upload audio to S3 (requires AWS keys)
+uv run python -m podcaster.src.rss --date 20250501
+
+# Stage 6: Archive all output files to S3 (requires AWS keys)
+uv run python -m podcaster.src.archive --date 20250501
+```
+
+### Tips
+
+- **Stages 1-2 are free** — no API calls, just ESPN scraping and HTML parsing.
+- **Rerun later stages without re-scraping** — data files persist on disk, so you
+  can iterate on stages 3+ without repeating stages 1-2.
+- **Pick a date you know had games** — off-season dates will return zero games.
+- **Inspect intermediate files** in `podcaster/output/<date>/`:
+  - `data/*.html` — raw ESPN HTML (stage 1)
+  - `data/*-prompt.html` — cleaned HTML per game (stage 2)
+  - `prompt.txt` — combined AI prompt (stage 2)
+  - `<date>-transcript.txt` — generated transcript (stage 3)
+  - `<date>-audio.mp3` — generated podcast audio (stage 4)
+
 ## Testing
 
 The project has a comprehensive test suite covering all core modules. Tests use
@@ -42,20 +132,17 @@ and mocks for external API calls (OpenAI, Gemini, S3).
 ### Running tests
 
 ```bash
-# Install dependencies (includes pytest)
-pip install -r requirements.txt
-
 # Run the full test suite
-python -m pytest
+uv run pytest
 
 # Run with verbose output
-python -m pytest -v
+uv run pytest -v
 
 # Run a specific test file
-python -m pytest tests/test_prompt.py
+uv run pytest tests/test_prompt.py
 
 # Run a specific test class or method
-python -m pytest tests/test_prompt.py::TestProcessBoxscore::test_removes_script_tags
+uv run pytest tests/test_prompt.py::TestProcessBoxscore::test_removes_script_tags
 ```
 
 ### Test structure
