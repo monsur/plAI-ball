@@ -1,8 +1,7 @@
-import os
+from pathlib import Path
 from bs4 import BeautifulSoup, Comment
 from podcaster.src import args_helper
 from podcaster.src import logger_helper
-from podcaster.src import os_helper
 
 logger = logger_helper.get_logger(__name__)
 
@@ -10,7 +9,7 @@ def run(args):
 
     def process_boxscore_file(filename):
         logger.info(f"Processing {filename}")
-        content = os_helper.read_file(args.output_data_dir, filename)
+        content = (Path(args.output_data_dir) / filename).read_text(encoding='utf-8')
         soup = BeautifulSoup(content, 'html.parser')
 
         # Remove unwanted tags in one go
@@ -73,7 +72,7 @@ def run(args):
 
     def process_recap_file(filename):
         logger.info(f"Processing {filename}")
-        content = os_helper.read_file(args.output_data_dir, filename)
+        content = (Path(args.output_data_dir) / filename).read_text(encoding='utf-8')
         soup = BeautifulSoup(content, 'html.parser')
         return soup.find(class_='Story__Body t__body').get_text()
 
@@ -85,11 +84,12 @@ def run(args):
         except Exception as e:
             logger.warning("No recap for %s: %s", filename, e)
 
-        os_helper.write_file(content, args.output_data_dir, filename.replace("boxscore", "prompt"))
+        (Path(args.output_data_dir) / filename.replace("boxscore", "prompt")).write_text(content, encoding='utf-8')
 
         return content
 
-    files = [f for f in os.listdir(args.output_data_dir) if f.endswith('boxscore.html')]
+    data_dir = Path(args.output_data_dir)
+    files = [f.name for f in data_dir.iterdir() if f.name.endswith('boxscore.html')]
 
     if not files:
         logger.error("No HTML files found in input directory.")
@@ -99,7 +99,7 @@ def run(args):
     for filename in files:
         content += "\n\n## GAME ##\n\n"
         content += process_file(filename)
-    os_helper.write_file(content, args.output_dir, "prompt.txt")
+    (Path(args.output_dir) / "prompt.txt").write_text(content, encoding='utf-8')
 
 if __name__ == "__main__":
     run(args_helper.get_args())

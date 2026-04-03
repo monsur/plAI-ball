@@ -1,11 +1,11 @@
 import datetime
 import os
+from pathlib import Path
 import boto3
 from mutagen.mp3 import MP3
 from bs4 import BeautifulSoup
 from podcaster.src import args_helper
 from podcaster.src import logger_helper
-from podcaster.src import os_helper
 
 logger = logger_helper.get_logger(__name__)
 
@@ -13,12 +13,13 @@ def run(args):
     max_items = 7
 
     client = boto3.client('s3',
-        aws_access_key_id=os_helper.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os_helper.getenv("AWS_SECRET_ACCESS_KEY"))
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"))
 
-    rss_text = os_helper.read_file("docs/rss.xml")
-    if rss_text is None:
+    rss_path = Path("docs/rss.xml")
+    if not rss_path.exists():
         raise Exception("rss.xml not found!")
+    rss_text = rss_path.read_text(encoding='utf-8')
 
     rss_soup = BeautifulSoup(rss_text, 'xml')
 
@@ -48,7 +49,8 @@ def run(args):
         item.append(pubDate)
 
         duration = rss_soup.new_tag("itunes:duration")
-        audio = MP3(f"{args.output_dir}/{args.date}-audio.mp3")
+        audio_path = Path(args.output_dir) / f"{args.date}-audio.mp3"
+        audio = MP3(audio_path)
         duration.string = str(int(audio.info.length))
         item.append(duration)
 
@@ -62,7 +64,7 @@ def run(args):
         item.append(transcript)
 
         enclosure = rss_soup.new_tag("enclosure",
-                                     length=os.path.getsize(f"{args.output_dir}/{args.date}-audio.mp3"),
+                                     length=audio_path.stat().st_size,
                                      type="audio/mpeg",
                                      url=f"https://{args.s3_bucket}.s3.amazonaws.com/audio/{args.date}-audio.mp3")
         item.append(enclosure)
@@ -83,14 +85,14 @@ def run(args):
     # If this is a new podcast, upload the MP3 and insert a new entry.
     if not exists:
         rss_soup.rss.channel.find("itunes:explicit").insert_after(get_item())
-        source_path = os_helper.join(args.output_dir, f"{args.date}-audio.mp3")
+        source_path = Path(args.output_dir) / f"{args.date}-audio.mp3"
         s3_path = f"audio/{args.date}-audio.mp3"
         logger.info(f"Uploading from {source_path} to {s3_path}...")
-        client.upload_file(source_path, args.s3_bucket, s3_path, ExtraArgs={"ACL": "public-read"})
-        source_path = os_helper.join(args.output_dir, f"{args.date}-transcript.txt")
+        client.upload_file(str(source_path), args.s3_bucket, s3_path, ExtraArgs={"ACL": "public-read"})
+        source_path = Path(args.output_dir) / f"{args.date}-transcript.txt"
         s3_path = f"audio/{args.date}-transcript.txt"
         logger.info(f"Uploading from {source_path} to {s3_path}...")
-        client.upload_file(source_path, args.s3_bucket, s3_path, ExtraArgs={"ACL": "public-read", "ContentType": "text/plain; charset=UTF-8"})
+        client.upload_file(str(source_path), args.s3_bucket, s3_path, ExtraArgs={"ACL": "public-read", "ContentType": "text/plain; charset=UTF-8"})
 
     # Purge old entries
     items = rss_soup.rss.channel.find_all("item")
@@ -103,7 +105,7 @@ def run(args):
         logger.info(f"Deleting file {filename}")
         client.delete_object(Bucket=args.s3_bucket, Key=filename)
 
-    os_helper.write_file(rss_soup.prettify(), "docs/rss.xml")
+    rss_path.write_text(rss_soup.prettify(), encoding='utf-8')
 
 if __name__ == "__main__":
     run(args_helper.get_args())

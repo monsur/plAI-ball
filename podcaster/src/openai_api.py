@@ -1,12 +1,12 @@
+import os
 from openai import OpenAI
 from podcaster.src import logger_helper
-from podcaster.src import os_helper
 
 logger = logger_helper.get_logger(__name__)
 
 class OpenAIAPI:
    def __init__(self, model):
-      self.client = OpenAI(api_key=os_helper.getenv('OPENAI_API_KEY'))
+      self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
       self.model = model
       self.temperature = 0.2
 

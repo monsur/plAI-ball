@@ -1,7 +1,6 @@
 """Tests for podcaster.src.rss — RSS feed generation and management."""
 
-import os
-import shutil
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 from bs4 import BeautifulSoup
 from tests.conftest import read_fixture
@@ -15,10 +14,6 @@ class TestRssItemCreation:
 
     def test_new_item_has_correct_title_format(self, mock_args):
         """Item title should be 'plAI ball! <formatted date>'."""
-        rss_xml = read_fixture("rss_base.xml")
-        soup = self._parse_rss(rss_xml)
-
-        # Simulate what get_item() does for title
         import datetime
 
         date_obj = datetime.datetime.strptime(mock_args.date, "%Y%m%d").date()
@@ -107,83 +102,81 @@ class TestRssFeedManagement:
             assert enclosure.get("url") is not None
             assert enclosure["url"].endswith(".mp3")
 
+    @patch("podcaster.src.rss.os.getenv", return_value="fake-key")
     @patch("podcaster.src.rss.boto3")
     @patch("podcaster.src.rss.MP3")
-    @patch("podcaster.src.rss.os_helper")
-    def test_run_adds_new_item(self, mock_os_helper, mock_mp3, mock_boto3, mock_args, tmp_path):
+    def test_run_adds_new_item(self, mock_mp3, mock_boto3, mock_getenv, mock_args, tmp_path):
         """run() should add a new item to the RSS feed for a new date."""
         from podcaster.src.rss import run
 
         rss_xml = read_fixture("rss_base.xml")
-        written_content = {}
 
-        mock_os_helper.read_file.return_value = rss_xml
-        mock_os_helper.getenv.return_value = "fake-key"
-        mock_os_helper.join.side_effect = os.path.join
+        # Write rss.xml to a temp location and patch Path to use it
+        rss_path = tmp_path / "docs" / "rss.xml"
+        rss_path.parent.mkdir(parents=True)
+        rss_path.write_text(rss_xml)
 
-        def capture_write(content, *args):
-            written_content["rss"] = content
-
-        mock_os_helper.write_file.side_effect = capture_write
-
-        # Mock MP3 duration
         mock_audio = MagicMock()
         mock_audio.info.length = 120.5
         mock_mp3.return_value = mock_audio
 
-        # Mock file size
-        with patch("podcaster.src.rss.os.path.getsize", return_value=1500000):
+        # Create a fake audio file for stat().st_size
+        audio_path = Path(mock_args.output_dir) / f"{mock_args.date}-audio.mp3"
+        audio_path.write_text("fake audio content")
+
+        with patch("podcaster.src.rss.Path", wraps=Path) as mock_path_cls:
+            # Make Path("docs/rss.xml") point to our temp file
+            original_init = Path.__new__
+            def patched_path(cls, *args, **kwargs):
+                p = original_init(cls, *args, **kwargs)
+                return p
+            mock_path_cls.side_effect = lambda *a, **k: rss_path if a == ("docs/rss.xml",) else Path(*a, **k)
+
             run(mock_args)
 
-        assert "rss" in written_content
-        soup = BeautifulSoup(written_content["rss"], "xml")
+        result = rss_path.read_text()
+        soup = BeautifulSoup(result, "xml")
         items = soup.find_all("item")
-        # Should now have 3 items (2 existing + 1 new)
         assert len(items) == 3
-        # New item should be first
         assert items[0].find("guid").string.strip() == "20250501"
 
+    @patch("podcaster.src.rss.os.getenv", return_value="fake-key")
     @patch("podcaster.src.rss.boto3")
     @patch("podcaster.src.rss.MP3")
-    @patch("podcaster.src.rss.os_helper")
-    def test_run_updates_existing_item(self, mock_os_helper, mock_mp3, mock_boto3, mock_args, tmp_path):
+    def test_run_updates_existing_item(self, mock_mp3, mock_boto3, mock_getenv, mock_args, tmp_path):
         """run() should update an existing item if the guid already exists."""
         from podcaster.src.rss import run
 
         rss_xml = read_fixture("rss_base.xml")
-        mock_args.date = "20251029"  # Already exists in fixture
-        written_content = {}
+        mock_args.date = "20251029"
 
-        mock_os_helper.read_file.return_value = rss_xml
-        mock_os_helper.getenv.return_value = "fake-key"
-        mock_os_helper.join.side_effect = os.path.join
-
-        def capture_write(content, *args):
-            written_content["rss"] = content
-
-        mock_os_helper.write_file.side_effect = capture_write
+        rss_path = tmp_path / "docs" / "rss.xml"
+        rss_path.parent.mkdir(parents=True)
+        rss_path.write_text(rss_xml)
 
         mock_audio = MagicMock()
         mock_audio.info.length = 95.0
         mock_mp3.return_value = mock_audio
 
-        with patch("podcaster.src.rss.os.path.getsize", return_value=1500000):
+        audio_path = Path(mock_args.output_dir) / f"{mock_args.date}-audio.mp3"
+        audio_path.write_text("fake audio content")
+
+        with patch("podcaster.src.rss.Path", wraps=Path) as mock_path_cls:
+            mock_path_cls.side_effect = lambda *a, **k: rss_path if a == ("docs/rss.xml",) else Path(*a, **k)
             run(mock_args)
 
-        assert "rss" in written_content
-        soup = BeautifulSoup(written_content["rss"], "xml")
+        result = rss_path.read_text()
+        soup = BeautifulSoup(result, "xml")
         items = soup.find_all("item")
-        # Should still be 2 items, not 3 (updated, not added)
         assert len(items) == 2
 
+    @patch("podcaster.src.rss.os.getenv", return_value="fake-key")
     @patch("podcaster.src.rss.boto3")
     @patch("podcaster.src.rss.MP3")
-    @patch("podcaster.src.rss.os_helper")
-    def test_run_purges_old_items_beyond_max(self, mock_os_helper, mock_mp3, mock_boto3, mock_args, tmp_path):
+    def test_run_purges_old_items_beyond_max(self, mock_mp3, mock_boto3, mock_getenv, mock_args, tmp_path):
         """When items exceed max_items (7), the oldest should be removed."""
         from podcaster.src.rss import run
 
-        # Build RSS with 7 items already
         rss_xml = read_fixture("rss_base.xml")
         soup = BeautifulSoup(rss_xml, "xml")
         template_item = soup.find("item")
@@ -192,20 +185,13 @@ class TestRssFeedManagement:
             new_item = BeautifulSoup(str(template_item), "xml").find("item")
             new_item.find("guid").string = f"2025100{i}"
             new_item.find("title").string = f"plAI ball! episode {i}"
-            soup.find("itunes:explicit", recursive=False) or soup.rss.channel.find("itunes:explicit")
             template_item.insert_before(new_item)
 
         assert len(soup.find_all("item")) == 7
 
-        written_content = {}
-        mock_os_helper.read_file.return_value = soup.prettify()
-        mock_os_helper.getenv.return_value = "fake-key"
-        mock_os_helper.join.side_effect = os.path.join
-
-        def capture_write(content, *args):
-            written_content["rss"] = content
-
-        mock_os_helper.write_file.side_effect = capture_write
+        rss_path = tmp_path / "docs" / "rss.xml"
+        rss_path.parent.mkdir(parents=True)
+        rss_path.write_text(soup.prettify())
 
         mock_audio = MagicMock()
         mock_audio.info.length = 100.0
@@ -214,24 +200,30 @@ class TestRssFeedManagement:
         mock_s3 = MagicMock()
         mock_boto3.client.return_value = mock_s3
 
-        with patch("podcaster.src.rss.os.path.getsize", return_value=1500000):
+        audio_path = Path(mock_args.output_dir) / f"{mock_args.date}-audio.mp3"
+        audio_path.write_text("fake audio content")
+
+        with patch("podcaster.src.rss.Path", wraps=Path) as mock_path_cls:
+            mock_path_cls.side_effect = lambda *a, **k: rss_path if a == ("docs/rss.xml",) else Path(*a, **k)
             run(mock_args)
 
-        assert "rss" in written_content
-        result_soup = BeautifulSoup(written_content["rss"], "xml")
+        result = rss_path.read_text()
+        result_soup = BeautifulSoup(result, "xml")
         items = result_soup.find_all("item")
-        # Should have max 7 items after adding one new (8 - 1 purged = 7)
         assert len(items) <= 7
 
-    @patch("podcaster.src.rss.os_helper")
-    def test_run_raises_on_missing_rss_file(self, mock_os_helper, mock_args):
+    def test_run_raises_on_missing_rss_file(self, mock_args, tmp_path):
         """run() should raise an exception if rss.xml is not found."""
         from podcaster.src.rss import run
-
-        mock_os_helper.read_file.return_value = None
-        mock_os_helper.getenv.return_value = "fake-key"
-
         import pytest
 
-        with pytest.raises(Exception, match="rss.xml not found"):
-            run(mock_args)
+        # Point to a non-existent path
+        missing_path = tmp_path / "docs" / "rss.xml"
+
+        with patch("podcaster.src.rss.Path") as mock_path_cls:
+            mock_rss_path = MagicMock()
+            mock_rss_path.exists.return_value = False
+            mock_path_cls.side_effect = lambda *a, **k: mock_rss_path if a == ("docs/rss.xml",) else Path(*a, **k)
+
+            with pytest.raises(Exception, match="rss.xml not found"):
+                run(mock_args)

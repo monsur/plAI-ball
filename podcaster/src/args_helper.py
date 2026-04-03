@@ -1,6 +1,9 @@
 import argparse
-import os
 from datetime import datetime, timedelta
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def get_args():
     """Get common arguments used across all scripts."""
@@ -24,11 +27,11 @@ def get_args():
 
     args.s3_bucket = "plai-ball"
 
-    args.output_root = os.path.join(os.getcwd(), "podcaster/output")
-    args.output_dir = os.path.join(args.output_root, args.date)
-    args.output_data_dir = os.path.join(args.output_dir, "data")
-    args.output_log_dir = os.path.join(args.output_dir, "logs")
-    os.makedirs(args.output_data_dir, exist_ok=True)
-    os.makedirs(args.output_log_dir, exist_ok=True)
+    args.output_root = Path.cwd() / "podcaster" / "output"
+    args.output_dir = args.output_root / args.date
+    args.output_data_dir = args.output_dir / "data"
+    args.output_log_dir = args.output_dir / "logs"
+    args.output_data_dir.mkdir(parents=True, exist_ok=True)
+    args.output_log_dir.mkdir(parents=True, exist_ok=True)
 
     return args

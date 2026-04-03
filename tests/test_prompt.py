@@ -1,6 +1,6 @@
 """Tests for podcaster.src.prompt — HTML cleaning and prompt assembly."""
 
-import os
+from pathlib import Path
 from tests.conftest import read_fixture
 from podcaster.src.prompt import run
 
@@ -202,23 +202,18 @@ class TestPromptRun:
 
     def test_run_creates_prompt_file(self, mock_args):
         """run() should create a prompt.txt in the output directory."""
-        # Set up: write a boxscore HTML file and recap file into the data dir
         boxscore_html = read_fixture("boxscore.html")
         recap_html = read_fixture("recap.html")
 
-        with open(os.path.join(mock_args.output_data_dir, "401234567-boxscore.html"), "w") as f:
-            f.write(boxscore_html)
-        with open(os.path.join(mock_args.output_data_dir, "401234567-recap.html"), "w") as f:
-            f.write(recap_html)
+        (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(boxscore_html)
+        (Path(mock_args.output_data_dir) / "401234567-recap.html").write_text(recap_html)
 
         run(mock_args)
 
-        prompt_path = os.path.join(mock_args.output_dir, "prompt.txt")
-        assert os.path.exists(prompt_path)
+        prompt_path = Path(mock_args.output_dir) / "prompt.txt"
+        assert prompt_path.exists()
 
-        with open(prompt_path, "r") as f:
-            content = f.read()
-
+        content = prompt_path.read_text()
         assert "There are 1 games in this prompt" in content
         assert "## GAME ##" in content
 
@@ -227,17 +222,12 @@ class TestPromptRun:
         boxscore_html = read_fixture("boxscore.html")
         recap_html = read_fixture("recap.html")
 
-        with open(os.path.join(mock_args.output_data_dir, "401234567-boxscore.html"), "w") as f:
-            f.write(boxscore_html)
-        with open(os.path.join(mock_args.output_data_dir, "401234567-recap.html"), "w") as f:
-            f.write(recap_html)
+        (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(boxscore_html)
+        (Path(mock_args.output_data_dir) / "401234567-recap.html").write_text(recap_html)
 
         run(mock_args)
 
-        prompt_path = os.path.join(mock_args.output_dir, "prompt.txt")
-        with open(prompt_path, "r") as f:
-            content = f.read()
-
+        content = (Path(mock_args.output_dir) / "prompt.txt").read_text()
         assert "<recap>" in content
         assert "Chicago Cubs defeated the Pittsburgh Pirates" in content
 
@@ -245,19 +235,15 @@ class TestPromptRun:
         """If no recap file exists, run() should still succeed without a <recap> tag."""
         boxscore_html = read_fixture("boxscore.html")
 
-        with open(os.path.join(mock_args.output_data_dir, "401234567-boxscore.html"), "w") as f:
-            f.write(boxscore_html)
+        (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(boxscore_html)
 
         # No recap file written — should not crash
         run(mock_args)
 
-        prompt_path = os.path.join(mock_args.output_dir, "prompt.txt")
-        assert os.path.exists(prompt_path)
+        prompt_path = Path(mock_args.output_dir) / "prompt.txt"
+        assert prompt_path.exists()
 
-        with open(prompt_path, "r") as f:
-            content = f.read()
-
-        # Prompt should exist but without a recap section
+        content = prompt_path.read_text()
         assert "## GAME ##" in content
         assert "<recap>" not in content
 
@@ -266,15 +252,11 @@ class TestPromptRun:
         boxscore_html = read_fixture("boxscore.html")
 
         for game_id in ["401234567", "401234568", "401234569"]:
-            with open(os.path.join(mock_args.output_data_dir, f"{game_id}-boxscore.html"), "w") as f:
-                f.write(boxscore_html)
+            (Path(mock_args.output_data_dir) / f"{game_id}-boxscore.html").write_text(boxscore_html)
 
         run(mock_args)
 
-        prompt_path = os.path.join(mock_args.output_dir, "prompt.txt")
-        with open(prompt_path, "r") as f:
-            content = f.read()
-
+        content = (Path(mock_args.output_dir) / "prompt.txt").read_text()
         assert "There are 3 games in this prompt" in content
         assert content.count("## GAME ##") == 3
 
@@ -282,17 +264,16 @@ class TestPromptRun:
         """If no boxscore files exist, run() should exit without creating prompt.txt."""
         run(mock_args)
 
-        prompt_path = os.path.join(mock_args.output_dir, "prompt.txt")
-        assert not os.path.exists(prompt_path)
+        prompt_path = Path(mock_args.output_dir) / "prompt.txt"
+        assert not prompt_path.exists()
 
     def test_run_creates_individual_prompt_files(self, mock_args):
         """run() should also create per-game -prompt.html files in the data dir."""
         boxscore_html = read_fixture("boxscore.html")
 
-        with open(os.path.join(mock_args.output_data_dir, "401234567-boxscore.html"), "w") as f:
-            f.write(boxscore_html)
+        (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(boxscore_html)
 
         run(mock_args)
 
-        prompt_file = os.path.join(mock_args.output_data_dir, "401234567-prompt.html")
-        assert os.path.exists(prompt_file)
+        prompt_file = Path(mock_args.output_data_dir) / "401234567-prompt.html"
+        assert prompt_file.exists()

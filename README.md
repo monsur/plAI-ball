@@ -156,7 +156,6 @@ tests/
 ├── test_data.py               # ESPN scraping and URL extraction
 ├── test_http_helper.py        # HTTP request wrapper
 ├── test_main.py               # Pipeline orchestration and step ordering
-├── test_os_helper.py          # File I/O utilities
 ├── test_prompt.py             # HTML cleaning and prompt assembly
 ├── test_rss.py                # RSS feed generation and management
 └── test_transcript.py         # AI model selection and transcript generation

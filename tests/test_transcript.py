@@ -1,5 +1,6 @@
 """Tests for podcaster.src.transcript — AI model selection and transcript generation."""
 
+from pathlib import Path
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -61,12 +62,12 @@ class TestGetClient:
 class TestTranscriptRun:
     """Test the transcript.run() function."""
 
-    @patch("podcaster.src.transcript.os_helper")
     @patch("podcaster.src.transcript.get_client")
-    def test_run_writes_transcript_file(self, mock_get_client, mock_os_helper, mock_args):
+    def test_run_writes_transcript_file(self, mock_get_client, mock_args):
         from podcaster.src.transcript import run
 
-        mock_os_helper.read_file.return_value = "prompt content"
+        # Write the prompt file that run() will read
+        (Path(mock_args.output_dir) / "prompt.txt").write_text("prompt content")
 
         mock_client = MagicMock()
         mock_client.get_response.return_value = "Welcome to Play Ball!"
@@ -78,17 +79,15 @@ class TestTranscriptRun:
         prompt_arg = mock_client.get_response.call_args[0][0]
         assert prompt_arg == "prompt content"
 
-        mock_os_helper.write_file.assert_called_once()
-        write_args = mock_os_helper.write_file.call_args[0]
-        assert write_args[0] == "Welcome to Play Ball!"
-        assert "20250501-transcript.txt" in write_args[2]
+        transcript_path = Path(mock_args.output_dir) / "20250501-transcript.txt"
+        assert transcript_path.exists()
+        assert transcript_path.read_text() == "Welcome to Play Ball!"
 
-    @patch("podcaster.src.transcript.os_helper")
     @patch("podcaster.src.transcript.get_client")
-    def test_run_does_not_write_on_none_response(self, mock_get_client, mock_os_helper, mock_args):
+    def test_run_does_not_write_on_none_response(self, mock_get_client, mock_args):
         from podcaster.src.transcript import run
 
-        mock_os_helper.read_file.return_value = "prompt content"
+        (Path(mock_args.output_dir) / "prompt.txt").write_text("prompt content")
 
         mock_client = MagicMock()
         mock_client.get_response.return_value = None
@@ -96,14 +95,14 @@ class TestTranscriptRun:
 
         run(mock_args)
 
-        mock_os_helper.write_file.assert_not_called()
+        transcript_path = Path(mock_args.output_dir) / "20250501-transcript.txt"
+        assert not transcript_path.exists()
 
-    @patch("podcaster.src.transcript.os_helper")
     @patch("podcaster.src.transcript.get_client")
-    def test_run_passes_system_instructions(self, mock_get_client, mock_os_helper, mock_args):
+    def test_run_passes_system_instructions(self, mock_get_client, mock_args):
         from podcaster.src.transcript import run
 
-        mock_os_helper.read_file.return_value = "prompt content"
+        (Path(mock_args.output_dir) / "prompt.txt").write_text("prompt content")
 
         mock_client = MagicMock()
         mock_client.get_response.return_value = "transcript"

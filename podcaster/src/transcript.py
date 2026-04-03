@@ -1,7 +1,6 @@
 from pathlib import Path
 from podcaster.src import args_helper
 from podcaster.src import logger_helper
-from podcaster.src import os_helper
 from podcaster.src.gemini import Gemini
 from podcaster.src.openai_api import OpenAIAPI
 
@@ -35,11 +34,11 @@ def run(args):
 
     client = get_client(args.model)
 
-    prompt_text = os_helper.read_file(args.output_dir, "prompt.txt")
+    prompt_text = (Path(args.output_dir) / "prompt.txt").read_text(encoding='utf-8')
 
     transcript = client.get_response(prompt_text, system_instructions)
     if transcript:
-        os_helper.write_file(transcript, args.output_dir, f"{args.date}-transcript.txt")
+        (Path(args.output_dir) / f"{args.date}-transcript.txt").write_text(transcript, encoding='utf-8')
 
 if __name__ == "__main__":
     run(args_helper.get_args())

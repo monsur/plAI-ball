@@ -1,17 +1,17 @@
 """Tests for podcaster.src.audio — text-to-speech conversion."""
 
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 
 class TestAudioRun:
-    @patch("podcaster.src.audio.os_helper")
+    @patch("podcaster.src.audio.os.getenv", return_value="fake-key")
     @patch("podcaster.src.audio.OpenAI")
-    def test_run_calls_tts_api(self, mock_openai_cls, mock_os_helper, mock_args):
+    def test_run_calls_tts_api(self, mock_openai_cls, mock_getenv, mock_args):
         from podcaster.src.audio import run
 
-        mock_os_helper.read_file.return_value = "Hello, welcome to Play Ball!"
-        mock_os_helper.getenv.return_value = "fake-key"
-        mock_os_helper.join.return_value = f"{mock_args.output_dir}/20250501-audio.mp3"
+        # Write the transcript file that run() will read
+        (Path(mock_args.output_dir) / "20250501-transcript.txt").write_text("Hello, welcome to Play Ball!")
 
         mock_client = MagicMock()
         mock_openai_cls.return_value = mock_client
@@ -27,14 +27,12 @@ class TestAudioRun:
         assert call_kwargs["voice"] == "ash"
         assert call_kwargs["input"] == "Hello, welcome to Play Ball!"
 
-    @patch("podcaster.src.audio.os_helper")
+    @patch("podcaster.src.audio.os.getenv", return_value="fake-key")
     @patch("podcaster.src.audio.OpenAI")
-    def test_run_reads_transcript_file(self, mock_openai_cls, mock_os_helper, mock_args):
+    def test_run_reads_transcript_file(self, mock_openai_cls, mock_getenv, mock_args):
         from podcaster.src.audio import run
 
-        mock_os_helper.read_file.return_value = "transcript content"
-        mock_os_helper.getenv.return_value = "fake-key"
-        mock_os_helper.join.return_value = "/tmp/audio.mp3"
+        (Path(mock_args.output_dir) / "20250501-transcript.txt").write_text("transcript content")
 
         mock_client = MagicMock()
         mock_openai_cls.return_value = mock_client
@@ -44,19 +42,16 @@ class TestAudioRun:
 
         run(mock_args)
 
-        mock_os_helper.read_file.assert_called_once_with(
-            mock_args.output_dir, f"{mock_args.date}-transcript.txt"
-        )
+        call_kwargs = mock_client.audio.speech.with_streaming_response.create.call_args[1]
+        assert call_kwargs["input"] == "transcript content"
 
-    @patch("podcaster.src.audio.os_helper")
+    @patch("podcaster.src.audio.os.getenv", return_value="fake-key")
     @patch("podcaster.src.audio.OpenAI")
-    def test_run_handles_api_error(self, mock_openai_cls, mock_os_helper, mock_args):
+    def test_run_handles_api_error(self, mock_openai_cls, mock_getenv, mock_args):
         """If the TTS API throws, run() should log the error and not crash."""
         from podcaster.src.audio import run
 
-        mock_os_helper.read_file.return_value = "transcript"
-        mock_os_helper.getenv.return_value = "fake-key"
-        mock_os_helper.join.return_value = "/tmp/audio.mp3"
+        (Path(mock_args.output_dir) / "20250501-transcript.txt").write_text("transcript")
 
         mock_client = MagicMock()
         mock_openai_cls.return_value = mock_client

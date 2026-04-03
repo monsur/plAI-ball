@@ -1,5 +1,6 @@
 """Tests for podcaster.src.data — ESPN scoreboard scraping and boxscore URL extraction."""
 
+from pathlib import Path
 from unittest.mock import patch
 from tests.conftest import read_fixture
 from podcaster.src.data import run
@@ -116,8 +117,6 @@ class TestGetBoxscoreUrls:
 
     def test_run_creates_boxscore_and_recap_files(self, mock_args):
         """run() should write both -boxscore.html and -recap.html for each game."""
-        import os
-
         scoreboard_html = read_fixture("scoreboard.html")
         boxscore_html = read_fixture("boxscore.html")
 
@@ -129,9 +128,9 @@ class TestGetBoxscoreUrls:
         with patch("podcaster.src.data.http_helper.make_request", side_effect=fake_request):
             run(mock_args)
 
-        data_files = os.listdir(mock_args.output_data_dir)
-        boxscore_files = [f for f in data_files if f.endswith("-boxscore.html")]
-        recap_files = [f for f in data_files if f.endswith("-recap.html")]
+        data_dir = Path(mock_args.output_data_dir)
+        boxscore_files = list(data_dir.glob("*-boxscore.html"))
+        recap_files = list(data_dir.glob("*-recap.html"))
 
         assert len(boxscore_files) == 3
         assert len(recap_files) == 3

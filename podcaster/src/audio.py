@@ -1,20 +1,20 @@
+import os
 from pathlib import Path
 from openai import OpenAI
 from podcaster.src import args_helper
 from podcaster.src import logger_helper
-from podcaster.src import os_helper
 
 logger = logger_helper.get_logger(__name__)
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 def run(args):
-    client = OpenAI(api_key=os_helper.getenv('OPENAI_API_KEY'))
+    client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-    content = os_helper.read_file(args.output_dir, f"{args.date}-transcript.txt")
+    content = (Path(args.output_dir) / f"{args.date}-transcript.txt").read_text(encoding='utf-8')
 
     try:
-        speech_file_path = os_helper.join(args.output_dir, f"{args.date}-audio.mp3")
+        speech_file_path = Path(args.output_dir) / f"{args.date}-audio.mp3"
 
         with client.audio.speech.with_streaming_response.create(
             model="gpt-4o-mini-tts",

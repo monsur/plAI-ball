@@ -1,10 +1,10 @@
 import time
+from pathlib import Path
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from podcaster.src import args_helper
 from podcaster.src import http_helper
 from podcaster.src import logger_helper
-from podcaster.src import os_helper
 
 logger = logger_helper.get_logger(__name__)
 
@@ -31,7 +31,7 @@ def run(args):
         filename = f"{url.split('/')[-1]}-{suffix}.html"
 
         # Save HTML content
-        os_helper.write_file(html, args.output_data_dir, filename)
+        (Path(args.output_data_dir) / filename).write_text(html, encoding='utf-8')
 
     source_url = f"https://www.espn.com/mlb/scoreboard/_/date/{args.date}"
     logger.info(f"Fetching box scores from: {source_url}")

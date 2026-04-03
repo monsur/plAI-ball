@@ -1,13 +1,13 @@
+import os
 from google import genai
 from google.genai import types
 from podcaster.src import logger_helper
-from podcaster.src import os_helper
 
 logger = logger_helper.get_logger(__name__)
 
 class Gemini:
     def __init__(self, model):
-        self.client = genai.Client(api_key=os_helper.getenv('GEMINI_API_KEY'))
+        self.client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
         self.model = model
         self.temperature = 0.2
 
