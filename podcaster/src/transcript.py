@@ -12,7 +12,7 @@ def get_client(input_model):
     # Supported models. The first model in the list is the default.
     # gpt-4.1 needs Tier 2 access for the prompt token size. But honestly I
     # didn't find gpt-4.1 that much better than gpt-4.1-mini for this task.
-    openai_models = ["gpt-5.4-nano", "gpt-4.1-mini", "gpt-4.1"]
+    openai_models = ["gpt-5.4-mini", "gpt-5.4-nano", "gpt-4.1-mini", "gpt-4.1"]
     gemini_models = ["gemini-2.5-pro-exp-03-25"]
 
     if input_model == "OpenAI":
