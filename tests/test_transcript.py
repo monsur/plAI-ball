@@ -13,7 +13,7 @@ class TestGetClient:
 
         with patch("podcaster.src.transcript.OpenAIAPI") as mock_cls:
             get_client("OpenAI")
-            mock_cls.assert_called_once_with("gpt-4.1-mini")
+            mock_cls.assert_called_once_with("gpt-5.4-nano")
 
     def test_gemini_shorthand_resolves_to_default_model(self):
         from podcaster.src.transcript import get_client
