@@ -18,7 +18,7 @@ def run(args):
 
         with client.audio.speech.with_streaming_response.create(
             model="gpt-4o-mini-tts",
-            voice="ash",
+            voice="echo",
             input=content,
             instructions=(PROMPTS_DIR / "tts_voice.txt").read_text(),
         ) as response:

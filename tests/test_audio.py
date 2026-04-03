@@ -24,7 +24,7 @@ class TestAudioRun:
         mock_client.audio.speech.with_streaming_response.create.assert_called_once()
         call_kwargs = mock_client.audio.speech.with_streaming_response.create.call_args[1]
         assert call_kwargs["model"] == "gpt-4o-mini-tts"
-        assert call_kwargs["voice"] == "ash"
+        assert call_kwargs["voice"] == "echo"
         assert call_kwargs["input"] == "Hello, welcome to Play Ball!"
 
     @patch("podcaster.src.audio.os.getenv", return_value="fake-key")
