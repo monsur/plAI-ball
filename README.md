@@ -33,6 +33,53 @@ directory for examples of the transcript and podcast.
 
 And of course, that logo was generated using Gemini!
 
+## Testing
+
+The project has a comprehensive test suite covering all core modules. Tests use
+[pytest](https://docs.pytest.org/) with HTML fixtures for the ESPN parsing logic
+and mocks for external API calls (OpenAI, Gemini, S3).
+
+### Running tests
+
+```bash
+# Install dependencies (includes pytest)
+pip install -r requirements.txt
+
+# Run the full test suite
+python -m pytest
+
+# Run with verbose output
+python -m pytest -v
+
+# Run a specific test file
+python -m pytest tests/test_prompt.py
+
+# Run a specific test class or method
+python -m pytest tests/test_prompt.py::TestProcessBoxscore::test_removes_script_tags
+```
+
+### Test structure
+
+```
+tests/
+├── conftest.py                # Shared fixtures (mock_args, fixture helpers)
+├── fixtures/                  # Sample HTML/XML files for deterministic tests
+│   ├── boxscore.html          # Sample ESPN boxscore page
+│   ├── recap.html             # Sample ESPN recap page
+│   ├── recap_missing_body.html
+│   ├── rss_base.xml           # Sample RSS feed
+│   └── scoreboard.html        # Sample ESPN scoreboard page
+├── test_archive.py            # S3 upload logic
+├── test_audio.py              # TTS API calls
+├── test_data.py               # ESPN scraping and URL extraction
+├── test_http_helper.py        # HTTP request wrapper
+├── test_main.py               # Pipeline orchestration and step ordering
+├── test_os_helper.py          # File I/O utilities
+├── test_prompt.py             # HTML cleaning and prompt assembly
+├── test_rss.py                # RSS feed generation and management
+└── test_transcript.py         # AI model selection and transcript generation
+```
+
 ## Disclaimer
 
 This is just a personal learning playground for myself. Its offered as-is, with
