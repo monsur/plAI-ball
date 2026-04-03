@@ -24,18 +24,39 @@
 <div id="fittBGContainer">Background</div>
 <div id="lightboxContainer">Lightbox</div>
 <!-- This is an HTML comment that should be removed -->
+<div data-testid="GameSwitcher">
+  <button data-testid="GameSwitcherPill">Game 1</button>
+  <button data-testid="GameSwitcherPill">Game 2</button>
+  <button data-testid="GameSwitcherPill">Game 3</button>
+</div>
+<nav aria-label="Secondary Navigation" data-testid="Nav_Secondary">
+  <ul>
+    <li><a href="/mlb/game/_/gameId/12345" tabindex="0">Gamecast</a></li>
+    <li><a href="/mlb/boxscore/_/gameId/12345" tabindex="0">Box Score</a></li>
+  </ul>
+</nav>
+<div id="BloomPortalId">Bloom content</div>
 <div class="Boxscore" style="margin: 10px">
-  <table class="BoxscoreTable">
+  <table class="BoxscoreTable" data-idx="1">
+    <colgroup><col width="50"/><col width="30"/><col width="30"/><col width="30"/></colgroup>
     <tr><th>Team</th><th>R</th><th>H</th><th>E</th></tr>
     <tr><td>Chicago Cubs</td><td>8</td><td>12</td><td>0</td></tr>
     <tr><td>Pittsburgh Pirates</td><td>3</td><td>7</td><td>1</td></tr>
   </table>
   <div class="GameplaySection">
     <h3>Scoring Summary</h3>
-    <p>5th inning: Swanson HR, Tucker HR, Suzuki HR</p>
+    <p data-player-uid="p:12345">5th inning: Swanson HR, Tucker HR, Suzuki HR</p>
     <p>7th inning: Suzuki 2-run HR</p>
   </div>
+  <picture data-testid="prism-picture">
+    <source media="(max-width: 767px)" srcset="https://a.espncdn.com/logo.png 1x, https://a.espncdn.com/logo.png 2x"/>
+    <source media="(min-width: 768px)" srcset="https://a.espncdn.com/logo-lg.png 1x"/>
+  </picture>
+  <a data-clubhouse-uid="s:1~l:10~t:16" href="/mlb/team/_/name/chc/chicago-cubs">Cubs</a>
 </div>
+<footer>
+  <a href="/mlb/playbyplay/_/gameId/12345">Full Play-By-Play</a>
+</footer>
 <section>
   <header><h3>MLB News</h3></header>
   <p>Some unrelated MLB news content</p>
@@ -55,6 +76,8 @@
 <div class="PageLayout page-container cf page-footer-container">
   <footer>Page Footer</footer>
 </div>
+<div id="taboola-below-content---dead-end---sport">Taboola ads</div>
+<div class="empty-wrapper"><div><div></div></div></div>
 <img src="image.jpg"/>
 <svg><circle cx="50" cy="50" r="40"/></svg>
 </body>

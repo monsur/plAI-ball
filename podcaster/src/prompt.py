@@ -13,7 +13,9 @@ def run(args):
         soup = BeautifulSoup(content, 'html.parser')
 
         # Remove unwanted tags in one go
-        for tag in soup.find_all(['script', 'style', 'link', 'img', 'svg']):
+        for tag in soup.find_all(['script', 'style', 'link', 'img', 'svg',
+                                  'head', 'nav', 'button', 'footer',
+                                  'picture', 'source', 'colgroup']):
             tag.decompose()
 
         # Remove HTML comments
@@ -27,29 +29,14 @@ def run(args):
             'div#fittOverlayContainer',
             'div#fittBGContainer',
             'div#lightboxContainer',
-            'header.db.Site__Header__Wrapper.sticky'
+            'header.db.Site__Header__Wrapper.sticky',
+            '[data-testid="GameSwitcher"]',
+            '#BloomPortalId',
+            '[id*="taboola"]',
         ]
         for sel in selectors:
             for tag in soup.select(sel):
                 tag.decompose()
-
-        # Remove unwanted attributes from all tags
-        attrs_to_remove = ['class', 'data-react-helmet', 'style', 'lang']
-        for tag in soup.find_all(True):
-            for attr in attrs_to_remove:
-                tag.attrs.pop(attr, None)
-
-        # Prune meta tags
-        for meta in soup.find_all('meta'):
-            if (
-                'charset' in meta.attrs or
-                meta.get('name') in ['viewport', 'medium', 'title'] or
-                (meta.get('name') or '').startswith('twitter:') or
-                meta.get('property') == 'fb:app_id' or
-                (meta.get('property') or '').startswith('og:') or
-                'http-equiv' in meta.attrs
-            ):
-                meta.decompose()
 
         # Remove certain sections by header text
         for section in soup.find_all("section"):
@@ -58,6 +45,19 @@ def run(args):
                 h3 = header.find("h3")
                 if h3 and any(x in h3.text for x in ["MLB News", "Videos", "Game Information"]):
                     section.decompose()
+
+        # Strip all attributes from all tags — they add bulk but no useful content
+        for tag in soup.find_all(True):
+            tag.attrs = {}
+
+        # Remove empty tags (divs, spans, etc. with no text content)
+        changed = True
+        while changed:
+            changed = False
+            for tag in soup.find_all(True):
+                if tag.name not in ['br', 'hr', 'td', 'th', 'tr', 'col'] and not tag.get_text(strip=True) and not tag.find_all(True):
+                    tag.decompose()
+                    changed = True
 
         # Get the HTML content
         if args.prettyprint:

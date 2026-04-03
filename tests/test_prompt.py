@@ -14,7 +14,9 @@ class TestProcessBoxscore:
 
         soup = BeautifulSoup(html, "html.parser")
 
-        for tag in soup.find_all(["script", "style", "link", "img", "svg"]):
+        for tag in soup.find_all(["script", "style", "link", "img", "svg",
+                                  "head", "nav", "button", "footer",
+                                  "picture", "source", "colgroup"]):
             tag.decompose()
 
         for comment in soup.find_all(
@@ -29,26 +31,13 @@ class TestProcessBoxscore:
             "div#fittBGContainer",
             "div#lightboxContainer",
             "header.db.Site__Header__Wrapper.sticky",
+            '[data-testid="GameSwitcher"]',
+            "#BloomPortalId",
+            '[id*="taboola"]',
         ]
         for sel in selectors:
             for tag in soup.select(sel):
                 tag.decompose()
-
-        attrs_to_remove = ["class", "data-react-helmet", "style", "lang"]
-        for tag in soup.find_all(True):
-            for attr in attrs_to_remove:
-                tag.attrs.pop(attr, None)
-
-        for meta in soup.find_all("meta"):
-            if (
-                "charset" in meta.attrs
-                or meta.get("name") in ["viewport", "medium", "title"]
-                or (meta.get("name") or "").startswith("twitter:")
-                or meta.get("property") == "fb:app_id"
-                or (meta.get("property") or "").startswith("og:")
-                or "http-equiv" in meta.attrs
-            ):
-                meta.decompose()
 
         for section in soup.find_all("section"):
             header = section.find("header")
@@ -58,6 +47,17 @@ class TestProcessBoxscore:
                     x in h3.text for x in ["MLB News", "Videos", "Game Information"]
                 ):
                     section.decompose()
+
+        for tag in soup.find_all(True):
+            tag.attrs = {}
+
+        changed = True
+        while changed:
+            changed = False
+            for tag in soup.find_all(True):
+                if tag.name not in ['br', 'hr', 'td', 'th', 'tr', 'col'] and not tag.get_text(strip=True) and not tag.find_all(True):
+                    tag.decompose()
+                    changed = True
 
         content = str(soup)
         lines = [line for line in content.split("\n") if line.strip()]
@@ -109,26 +109,82 @@ class TestProcessBoxscore:
         result = self._process_boxscore(html)
         assert "Page Footer" not in result
 
-    def test_strips_class_and_style_attributes(self):
+    def test_removes_head_section(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "<head>" not in result
+        assert "Full box score for Cubs vs Pirates" not in result
+
+    def test_removes_nav_elements(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "<nav" not in result
+        assert "Gamecast" not in result
+        assert "Secondary Navigation" not in result
+
+    def test_removes_button_elements(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "<button" not in result
+        assert "GameSwitcherPill" not in result
+
+    def test_removes_footer_elements(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "<footer" not in result
+        assert "Full Play-By-Play" not in result
+
+    def test_removes_picture_and_source_tags(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "<picture" not in result
+        assert "<source" not in result
+        assert "srcset" not in result
+        assert "espncdn.com" not in result
+
+    def test_removes_colgroup_tags(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "<colgroup" not in result
+        assert "<col" not in result
+
+    def test_removes_game_switcher(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "GameSwitcher" not in result
+        assert "Game 1" not in result
+
+    def test_removes_bloom_portal(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "BloomPortalId" not in result
+        assert "Bloom content" not in result
+
+    def test_removes_taboola(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "taboola" not in result
+        assert "Taboola ads" not in result
+
+    def test_strips_all_attributes(self):
         html = read_fixture("boxscore.html")
         result = self._process_boxscore(html)
         assert 'class=' not in result
         assert 'style=' not in result
         assert 'data-react-helmet=' not in result
         assert 'lang=' not in result
+        assert 'data-testid=' not in result
+        assert 'data-idx=' not in result
+        assert 'data-player-uid=' not in result
+        assert 'data-clubhouse-uid=' not in result
+        assert 'href=' not in result
+        assert 'tabindex=' not in result
+        assert 'aria-' not in result
 
-    def test_removes_unwanted_meta_tags(self):
+    def test_removes_empty_wrapper_divs(self):
         html = read_fixture("boxscore.html")
         result = self._process_boxscore(html)
-        assert "viewport" not in result
-        assert "twitter:" not in result
-        assert "fb:app_id" not in result
-        assert "og:" not in result
-
-    def test_keeps_description_meta(self):
-        html = read_fixture("boxscore.html")
-        result = self._process_boxscore(html)
-        assert "Full box score for Cubs vs Pirates" in result
+        assert "empty-wrapper" not in result
 
     def test_removes_mlb_news_section(self):
         html = read_fixture("boxscore.html")
@@ -156,6 +212,12 @@ class TestProcessBoxscore:
         result = self._process_boxscore(html)
         assert "Chicago Cubs" in result
         assert "Pittsburgh Pirates" in result
+
+    def test_preserves_gameplay_content(self):
+        html = read_fixture("boxscore.html")
+        result = self._process_boxscore(html)
+        assert "Swanson HR" in result
+        assert "Suzuki 2-run HR" in result
 
     def test_removes_empty_lines(self):
         html = read_fixture("boxscore.html")
