@@ -1,9 +1,12 @@
+from pathlib import Path
 from openai import OpenAI
 from podcaster.src import args_helper
 from podcaster.src import logger_helper
 from podcaster.src import os_helper
 
 logger = logger_helper.get_logger(__name__)
+
+PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 def run(args):
     client = OpenAI(api_key=os_helper.getenv('OPENAI_API_KEY'))
@@ -17,19 +20,7 @@ def run(args):
             model="gpt-4o-mini-tts",
             voice="ash",
             input=content,
-            instructions="""
-Voice Affect: Energetic and animated; dynamic with variations in pitch and tone.
-
-Tone: Excited and enthusiastic, conveying an upbeat and thrilling atmosphere.
-
-Pacing: Rapid delivery when describing the game or the key moments (e.g., "an overtime thriller," "pull off an unbelievable win") to convey the intensity and build excitement. Slightly slower during dramatic pauses to let key points sink in. Pause between each paragraph to give listeners a moment to reflect.
-
-Emotion: Intensely focused, and excited. Giving off positive energy.
-
-Personality: Relatable and engaging.
-
-Pauses: Short, purposeful pauses after key moments in the game.
-            """,
+            instructions=(PROMPTS_DIR / "tts_voice.txt").read_text(),
         ) as response:
             response.stream_to_file(speech_file_path)
     except Exception as e:
