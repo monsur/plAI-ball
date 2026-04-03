@@ -9,11 +9,11 @@ class OpenAIAPI:
 
    def get_response(self, prompt, system_instructions):
       try:
-         response = self.client.responses.create(
+         response = self.client.chat.completions.create(
             model=self.model,
-            input=[
+            messages=[
                {
-                  "role": "developer",
+                  "role": "system",
                   "content": system_instructions
                },
                {
@@ -21,7 +21,7 @@ class OpenAIAPI:
                   "content": prompt
                }
             ], temperature=self.temperature)
-         return response.output_text
+         return response.choices[0].message.content
       except Exception as e:
          print(f"Error generating summary: {e}")
          return None
