@@ -34,6 +34,31 @@
     full
    </itunes:episodeType>
    <title>
+    plAI ball! Tuesday, April 07, 2026
+   </title>
+   <description>
+    AI-curated MLB highlights for games on Tuesday, April 07, 2026
+   </description>
+   <guid>
+    20260407
+   </guid>
+   <pubDate>
+    Wed, 08 Apr 2026 11:08:25
+   </pubDate>
+   <itunes:duration>
+    415
+   </itunes:duration>
+   <itunes:explicit>
+    false
+   </itunes:explicit>
+   <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20260407-transcript.txt"/>
+   <enclosure length="6648960" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20260407-audio.mp3"/>
+  </item>
+  <item>
+   <itunes:episodeType>
+    full
+   </itunes:episodeType>
+   <title>
     plAI ball! Monday, April 06, 2026
    </title>
    <description>
@@ -178,31 +203,6 @@
    </itunes:explicit>
    <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20260401-transcript.txt"/>
    <enclosure length="4962432" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20260401-audio.mp3"/>
-  </item>
-  <item>
-   <itunes:episodeType>
-    full
-   </itunes:episodeType>
-   <title>
-    plAI ball! Saturday, November 01, 2025
-   </title>
-   <description>
-    AI-curated MLB highlights for games on Saturday, November 01, 2025
-   </description>
-   <guid>
-    20251101
-   </guid>
-   <pubDate>
-    Sun, 02 Nov 2025 10:22:38
-   </pubDate>
-   <itunes:duration>
-    75
-   </itunes:duration>
-   <itunes:explicit>
-    false
-   </itunes:explicit>
-   <podcast:transcript type="text/plain" url="https://plai-ball.s3.amazonaws.com/audio/20251101-transcript.txt"/>
-   <enclosure length="1204992" type="audio/mpeg" url="https://plai-ball.s3.amazonaws.com/audio/20251101-audio.mp3"/>
   </item>
  </channel>
 </rss>
