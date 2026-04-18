@@ -8,7 +8,7 @@ class OpenAIAPI:
    def __init__(self, model):
       self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
       self.model = model
-      self.temperature = 0.2
+      self.temperature = float(os.getenv("LLM_TEMPERATURE", "0.7"))
 
    def get_response(self, prompt, system_instructions):
       try:

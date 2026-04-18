@@ -98,18 +98,18 @@ Before starting, orient yourself:
 
 **Role:** These are thin API wrappers that own model config. Temperature lives here, not in `transcript.py`.
 
-- [ ] In `openai_api.py`: replace hardcoded `temperature = 0.2` with:
+- [x] In `openai_api.py`: replace hardcoded `temperature = 0.2` with:
   ```python
   temperature = float(os.getenv("LLM_TEMPERATURE", "0.7"))
   ```
-- [ ] In `gemini.py`: same replacement
-- [ ] Add `import os` if not already present in each file
+- [x] In `gemini.py`: same replacement
+- [x] Add `import os` if not already present in each file
 
 **Tests** (`tests/test_transcript.py`):
-- [ ] Add `test_openai_uses_temperature_from_env` — set `LLM_TEMPERATURE=0.5` via monkeypatch, assert that value is passed to the OpenAI completion call
-- [ ] Add `test_openai_temperature_defaults_to_0_7` — with no env var set, assert temperature is `0.7`
-- [ ] Add `test_gemini_uses_temperature_from_env` — same pattern for Gemini
-- [ ] Run: `uv run pytest tests/test_transcript.py` — all pass before continuing
+- [x] Add `test_openai_uses_temperature_from_env` — set `LLM_TEMPERATURE=0.5` via monkeypatch, assert that value is passed to the OpenAI completion call
+- [x] Add `test_openai_temperature_defaults_to_0_7` — with no env var set, assert temperature is `0.7`
+- [x] Add `test_gemini_uses_temperature_from_env` — same pattern for Gemini
+- [x] Run: `uv run pytest tests/test_transcript.py` — all pass before continuing
 
 ---
 
