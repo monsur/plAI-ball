@@ -119,17 +119,17 @@ Before starting, orient yourself:
 
 **Role:** Fetches all external data from ESPN. Does not parse meaning or assemble prompts — downloads and saves raw content only.
 
-- [ ] Add `fetch_standings(args)` function:
+- [x] Add `fetch_standings(args)` function:
   - Fetch ESPN MLB standings page using the existing `http_helper.make_request()` pattern (same User-Agent, same error handling)
   - Parse HTML into structured plain text: one team per line, columns: team name, W, L, GB, current streak, last 10
   - Write to `{args.output_dir}/standings.txt`
-- [ ] Call `fetch_standings(args)` from `run(args)` after game data is fetched
-- [ ] Make it non-fatal: wrap in try/except, log on failure, do not raise — standings are nice-to-have, not required
+- [x] Call `fetch_standings(args)` from `run(args)` after game data is fetched
+- [x] Make it non-fatal: wrap in try/except, log on failure, do not raise — standings are nice-to-have, not required
 
 **Tests** (`tests/test_data.py`):
-- [ ] Add `test_fetch_standings_writes_file` — mock `http_helper.make_request`, assert `standings.txt` is written with correct structure (team, W, L, GB, streak, last 10)
-- [ ] Add `test_fetch_standings_non_fatal` — mock request raises exception, assert `run()` completes without raising and logs the error
-- [ ] Run: `uv run pytest tests/test_data.py` — all pass before continuing
+- [x] Add `test_fetch_standings_writes_file` — mock `http_helper.make_request`, assert `standings.txt` is written with correct structure (team, W, L, GB, streak, last 10)
+- [x] Add `test_fetch_standings_non_fatal` — mock request raises exception, assert `run()` completes without raising and logs the error
+- [x] Run: `uv run pytest tests/test_data.py` — all pass before continuing
 
 ---
 
