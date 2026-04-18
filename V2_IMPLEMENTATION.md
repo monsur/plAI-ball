@@ -38,7 +38,7 @@ Before starting, orient yourself:
 
 **Role:** Defines the LLM's persona and the output format contract. `transcript.py` passes this as the system prompt without interpreting it. This file is also the contract `audio.py` parses — get the format right here first.
 
-- [ ] Rewrite the full file. Must include:
+- [x] Rewrite the full file. Must include:
 
   **Characters:**
   - Abe — veteran, authoritative, stats-driven, dry wit (Karl Ravech energy)
@@ -269,3 +269,18 @@ Run once all steps are checked off:
   - No jarring stitching seams between chunks
 - [ ] Run full test suite: `uv run pytest`
 - [ ] Confirm RSS feed publishes with correct duration metadata
+
+---
+
+## Future Refinements
+
+Observations captured during implementation. Not blockers — revisit after the end-to-end pipeline is working.
+
+### Step 2 — Transcript prompt tuning
+
+From exercising the new prompt against real data (`20260417`, gpt-5.4-mini, 15 games):
+
+- **Length calibration is off.** Top-story recaps came in ~130–150 words (spec says 150–200, slightly under). Rapid-fire recaps came in ~80–120 words (spec says 30–50, way over). The model is being generous across the board. Consider tightening the rapid-fire guidance — maybe a hard ceiling or an explicit example of a 30-word rapid-fire exchange so the model has a clear target.
+- **Hallucinated player names.** "Matt Ballesteros" appeared in a Cubs recap with no basis in the source data. The prompt should probably add an explicit "only use player names that appear in the game data" rule. Worth auditing a few more runs to see how frequent this is.
+- **`## STANDINGS ##` usage is untested.** Steps 5 and 6 haven't run yet, so we haven't seen whether the model weaves standings in naturally or ignores the block entirely.
+
