@@ -115,3 +115,49 @@ class TestTranscriptRun:
         assert "Play Ball!" in system_instructions
         assert "1500 words" in system_instructions
         assert "## GAME ##" in system_instructions
+
+
+class TestLLMTemperature:
+    """Temperature is sourced from config.LLM_TEMPERATURE."""
+
+    def test_openai_uses_temperature_from_config(self, monkeypatch):
+        monkeypatch.setattr("podcaster.src.config.LLM_TEMPERATURE", 0.5)
+        with patch("podcaster.src.openai_api.OpenAI") as mock_openai_cls:
+            from podcaster.src.openai_api import OpenAIAPI
+
+            mock_client = MagicMock()
+            mock_openai_cls.return_value = mock_client
+            mock_client.chat.completions.create.return_value.choices = [
+                MagicMock(message=MagicMock(content="ok"))
+            ]
+
+            api = OpenAIAPI("gpt-5.4-mini")
+            api.get_response("prompt", "system")
+
+            create_kwargs = mock_client.chat.completions.create.call_args.kwargs
+            assert create_kwargs["temperature"] == 0.5
+
+    def test_openai_temperature_reads_current_config_value(self):
+        """Whatever config.toml says at call time is what the client gets."""
+        from podcaster.src import config
+        with patch("podcaster.src.openai_api.OpenAI"):
+            from podcaster.src.openai_api import OpenAIAPI
+
+            api = OpenAIAPI("gpt-5.4-mini")
+            assert api.temperature == config.LLM_TEMPERATURE
+
+    def test_gemini_uses_temperature_from_config(self, monkeypatch):
+        monkeypatch.setattr("podcaster.src.config.LLM_TEMPERATURE", 0.5)
+        with patch("podcaster.src.gemini.genai") as mock_genai, \
+             patch("podcaster.src.gemini.types") as mock_types:
+            from podcaster.src.gemini import Gemini
+
+            mock_client = MagicMock()
+            mock_genai.Client.return_value = mock_client
+            mock_client.models.generate_content.return_value.text = "ok"
+
+            api = Gemini("gemini-2.5-pro-exp-03-25")
+            api.get_response("prompt", "system")
+
+            config_kwargs = mock_types.GenerateContentConfig.call_args.kwargs
+            assert config_kwargs["temperature"] == 0.5

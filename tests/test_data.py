@@ -1,9 +1,10 @@
 """Tests for podcaster.src.data — ESPN scoreboard scraping and boxscore URL extraction."""
 
+import types
 from pathlib import Path
 from unittest.mock import patch
 from tests.conftest import read_fixture
-from podcaster.src.data import run
+from podcaster.src.data import run, fetch_standings
 
 
 class TestGetBoxscoreUrls:
@@ -134,3 +135,63 @@ class TestGetBoxscoreUrls:
 
         assert len(boxscore_files) == 3
         assert len(recap_files) == 3
+
+
+class TestFetchStandings:
+    """Test fetch_standings() — parses ESPN standings page into structured text."""
+
+    def test_fetch_standings_writes_file(self, mock_args):
+        standings_html = read_fixture("standings.html")
+
+        with patch(
+            "podcaster.src.data.http_helper.make_request",
+            return_value=standings_html,
+        ):
+            fetch_standings(mock_args)
+
+        standings_path = Path(mock_args.output_dir) / "standings.txt"
+        assert standings_path.exists()
+
+        content = standings_path.read_text()
+        # Expected structure: division header rows + team rows with W/L/GB/STRK/L10 columns.
+        assert "East" in content
+        assert "Central" in content
+        assert "West" in content
+        # Spot-check a team row has all required columns.
+        team_lines = [line for line in content.splitlines() if "W:" in line]
+        assert team_lines, "expected at least one team line"
+        sample = team_lines[0]
+        for label in ("W:", "L:", "GB:", "STRK:", "L10:"):
+            assert label in sample
+
+    def test_fetch_standings_non_fatal(self, mock_args):
+        """If the standings request fails, fetch_standings logs and does not raise."""
+        with patch(
+            "podcaster.src.data.http_helper.make_request",
+            side_effect=Exception("network down"),
+        ):
+            # Should not raise.
+            fetch_standings(mock_args)
+
+        standings_path = Path(mock_args.output_dir) / "standings.txt"
+        assert not standings_path.exists()
+
+    def test_run_does_not_raise_when_standings_fail(self, mock_args):
+        """run() must continue when standings fetch fails — games are the critical path."""
+        scoreboard_html = read_fixture("scoreboard.html")
+        boxscore_html = read_fixture("boxscore.html")
+
+        def fake_request(url):
+            if "standings" in url:
+                raise Exception("standings down")
+            if "scoreboard" in url:
+                return scoreboard_html
+            return boxscore_html
+
+        with patch(
+            "podcaster.src.data.http_helper.make_request",
+            side_effect=fake_request,
+        ):
+            count = run(mock_args)
+
+        assert count == 3

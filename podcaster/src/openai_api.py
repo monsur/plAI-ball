@@ -1,6 +1,6 @@
 import os
 from openai import OpenAI
-from podcaster.src import logger_helper
+from podcaster.src import config, logger_helper
 
 logger = logger_helper.get_logger(__name__)
 
@@ -8,7 +8,7 @@ class OpenAIAPI:
    def __init__(self, model):
       self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
       self.model = model
-      self.temperature = 0.2
+      self.temperature = config.LLM_TEMPERATURE
 
    def get_response(self, prompt, system_instructions):
       try:

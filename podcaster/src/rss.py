@@ -5,12 +5,13 @@ import boto3
 from mutagen.mp3 import MP3
 from bs4 import BeautifulSoup
 from podcaster.src import args_helper
+from podcaster.src import config
 from podcaster.src import logger_helper
 
 logger = logger_helper.get_logger(__name__)
 
 def run(args):
-    max_items = 7
+    max_items = config.RSS_MAX_EPISODES
 
     client = boto3.client('s3',
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),

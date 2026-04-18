@@ -216,3 +216,29 @@ class TestPromptRun:
 
         prompt_file = Path(mock_args.output_data_dir) / "401234567-prompt.txt"
         assert prompt_file.exists()
+
+    def test_run_includes_standings_when_file_present(self, mock_args):
+        """If standings.txt exists, it should be inserted before the first ## GAME ##."""
+        boxscore_html = read_fixture("boxscore.html")
+        (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(boxscore_html)
+        (Path(mock_args.output_dir) / "standings.txt").write_text(
+            "East\nNYY New York Yankees  W:11  L:9  GB:-  STRK:W1  L10:6-4\n"
+        )
+
+        run(mock_args)
+
+        content = (Path(mock_args.output_dir) / "prompt.txt").read_text()
+        assert "## STANDINGS ##" in content
+        assert "NYY New York Yankees" in content
+        # Standings must appear before the first game.
+        assert content.index("## STANDINGS ##") < content.index("## GAME ##")
+
+    def test_run_omits_standings_when_file_absent(self, mock_args):
+        """No standings.txt → no ## STANDINGS ## block, no error."""
+        boxscore_html = read_fixture("boxscore.html")
+        (Path(mock_args.output_data_dir) / "401234567-boxscore.html").write_text(boxscore_html)
+
+        run(mock_args)
+
+        content = (Path(mock_args.output_dir) / "prompt.txt").read_text()
+        assert "## STANDINGS ##" not in content
