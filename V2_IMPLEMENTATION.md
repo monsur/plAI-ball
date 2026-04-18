@@ -156,16 +156,16 @@ Before starting, orient yourself:
 
 **Role:** Publishes the RSS feed and prunes old episodes. It owns the retention policy — how many episodes to keep is a content decision, not a technical constraint, so it belongs here as a configurable value.
 
-- [ ] Replace hardcoded `7` with:
+- [x] Replace hardcoded `7` with:
   ```python
   max_items = int(os.getenv("RSS_MAX_EPISODES", "7"))
   ```
-- [ ] Add `import os` if not already present
+- [x] Add `import os` if not already present
 
 **Tests** (`tests/test_rss.py`):
-- [ ] Add `test_rss_respects_max_episodes_from_env` — set `RSS_MAX_EPISODES=3` via monkeypatch, assert only 3 items are retained after pruning
-- [ ] Add `test_rss_max_episodes_defaults_to_7` — with no env var set, assert 7 items are retained
-- [ ] Run: `uv run pytest tests/test_rss.py` — all pass before continuing
+- [x] Add `test_rss_respects_max_episodes_from_env` — set `RSS_MAX_EPISODES=3` via monkeypatch, assert only 3 items are retained after pruning
+- [x] Add `test_rss_max_episodes_defaults_to_7` — with no env var set, assert 7 items are retained
+- [x] Run: `uv run pytest tests/test_rss.py` — all pass before continuing
 
 ---
 

@@ -102,10 +102,9 @@ class TestRssFeedManagement:
             assert enclosure.get("url") is not None
             assert enclosure["url"].endswith(".mp3")
 
-    @patch("podcaster.src.rss.os.getenv", return_value="fake-key")
     @patch("podcaster.src.rss.boto3")
     @patch("podcaster.src.rss.MP3")
-    def test_run_adds_new_item(self, mock_mp3, mock_boto3, mock_getenv, mock_args, tmp_path):
+    def test_run_adds_new_item(self, mock_mp3, mock_boto3, mock_args, tmp_path):
         """run() should add a new item to the RSS feed for a new date."""
         from podcaster.src.rss import run
 
@@ -140,10 +139,9 @@ class TestRssFeedManagement:
         assert len(items) == 3
         assert items[0].find("guid").string.strip() == "20250501"
 
-    @patch("podcaster.src.rss.os.getenv", return_value="fake-key")
     @patch("podcaster.src.rss.boto3")
     @patch("podcaster.src.rss.MP3")
-    def test_run_updates_existing_item(self, mock_mp3, mock_boto3, mock_getenv, mock_args, tmp_path):
+    def test_run_updates_existing_item(self, mock_mp3, mock_boto3, mock_args, tmp_path):
         """run() should update an existing item if the guid already exists."""
         from podcaster.src.rss import run
 
@@ -170,10 +168,9 @@ class TestRssFeedManagement:
         items = soup.find_all("item")
         assert len(items) == 2
 
-    @patch("podcaster.src.rss.os.getenv", return_value="fake-key")
     @patch("podcaster.src.rss.boto3")
     @patch("podcaster.src.rss.MP3")
-    def test_run_purges_old_items_beyond_max(self, mock_mp3, mock_boto3, mock_getenv, mock_args, tmp_path):
+    def test_run_purges_old_items_beyond_max(self, mock_mp3, mock_boto3, mock_args, tmp_path):
         """When items exceed max_items (7), the oldest should be removed."""
         from podcaster.src.rss import run
 
@@ -211,6 +208,92 @@ class TestRssFeedManagement:
         result_soup = BeautifulSoup(result, "xml")
         items = result_soup.find_all("item")
         assert len(items) <= 7
+
+    @patch("podcaster.src.rss.boto3")
+    @patch("podcaster.src.rss.MP3")
+    def test_rss_respects_max_episodes_from_env(
+        self, mock_mp3, mock_boto3, mock_args, tmp_path, monkeypatch
+    ):
+        """When RSS_MAX_EPISODES=3 is set, only 3 items survive pruning."""
+        from podcaster.src.rss import run
+
+        monkeypatch.setenv("RSS_MAX_EPISODES", "3")
+
+        rss_xml = read_fixture("rss_base.xml")
+        soup = BeautifulSoup(rss_xml, "xml")
+        template_item = soup.find("item")
+        # rss_base has 2 items; add 1 so there are 3 existing. The new item for
+        # mock_args.date makes 4, and the prune step drops the oldest to 3.
+        new_item = BeautifulSoup(str(template_item), "xml").find("item")
+        new_item.find("guid").string = "20251000"
+        new_item.find("title").string = "plAI ball! episode 0"
+        template_item.insert_before(new_item)
+
+        assert len(soup.find_all("item")) == 3
+
+        rss_path = tmp_path / "docs" / "rss.xml"
+        rss_path.parent.mkdir(parents=True)
+        rss_path.write_text(soup.prettify())
+
+        mock_audio = MagicMock()
+        mock_audio.info.length = 100.0
+        mock_mp3.return_value = mock_audio
+        mock_boto3.client.return_value = MagicMock()
+
+        audio_path = Path(mock_args.output_dir) / f"{mock_args.date}-audio.mp3"
+        audio_path.write_text("fake audio content")
+        (Path(mock_args.output_dir) / f"{mock_args.date}-transcript.txt").write_text("t")
+
+        with patch("podcaster.src.rss.Path", wraps=Path) as mock_path_cls:
+            mock_path_cls.side_effect = lambda *a, **k: rss_path if a == ("docs/rss.xml",) else Path(*a, **k)
+            run(mock_args)
+
+        result_soup = BeautifulSoup(rss_path.read_text(), "xml")
+        items = result_soup.find_all("item")
+        assert len(items) == 3
+
+    @patch("podcaster.src.rss.boto3")
+    @patch("podcaster.src.rss.MP3")
+    def test_rss_max_episodes_defaults_to_7(
+        self, mock_mp3, mock_boto3, mock_args, tmp_path, monkeypatch
+    ):
+        """With no env var set, max_items falls back to 7."""
+        from podcaster.src.rss import run
+
+        monkeypatch.delenv("RSS_MAX_EPISODES", raising=False)
+
+        rss_xml = read_fixture("rss_base.xml")
+        soup = BeautifulSoup(rss_xml, "xml")
+        template_item = soup.find("item")
+        # 7 existing items + 1 new = 8, must prune to 7.
+        for i in range(5):
+            new_item = BeautifulSoup(str(template_item), "xml").find("item")
+            new_item.find("guid").string = f"2025100{i}"
+            new_item.find("title").string = f"plAI ball! episode {i}"
+            template_item.insert_before(new_item)
+
+        assert len(soup.find_all("item")) == 7
+
+        rss_path = tmp_path / "docs" / "rss.xml"
+        rss_path.parent.mkdir(parents=True)
+        rss_path.write_text(soup.prettify())
+
+        mock_audio = MagicMock()
+        mock_audio.info.length = 100.0
+        mock_mp3.return_value = mock_audio
+        mock_boto3.client.return_value = MagicMock()
+
+        audio_path = Path(mock_args.output_dir) / f"{mock_args.date}-audio.mp3"
+        audio_path.write_text("fake audio content")
+        (Path(mock_args.output_dir) / f"{mock_args.date}-transcript.txt").write_text("t")
+
+        with patch("podcaster.src.rss.Path", wraps=Path) as mock_path_cls:
+            mock_path_cls.side_effect = lambda *a, **k: rss_path if a == ("docs/rss.xml",) else Path(*a, **k)
+            run(mock_args)
+
+        result_soup = BeautifulSoup(rss_path.read_text(), "xml")
+        items = result_soup.find_all("item")
+        assert len(items) == 7
 
     def test_run_raises_on_missing_rss_file(self, mock_args, tmp_path):
         """run() should raise an exception if rss.xml is not found."""

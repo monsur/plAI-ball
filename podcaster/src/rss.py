@@ -10,7 +10,7 @@ from podcaster.src import logger_helper
 logger = logger_helper.get_logger(__name__)
 
 def run(args):
-    max_items = 7
+    max_items = int(os.getenv("RSS_MAX_EPISODES", "7"))
 
     client = boto3.client('s3',
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
