@@ -17,8 +17,8 @@ Before starting, orient yourself:
 
 **Role:** Unblock `audio.py` (needs `pydub`), externalize voice IDs, and document all new env vars. No behavior changes — just wiring.
 
-- [ ] Add `pydub` to `pyproject.toml` dependencies, run `uv add pydub`
-- [ ] Add to `.env.example`:
+- [x] Add `pydub` to `pyproject.toml` dependencies, run `uv add pydub`
+- [x] Add to `.env.example`:
   ```
   ABE_VOICE_ID=...                # ElevenLabs voice ID for Abe
   BAILEY_VOICE_ID=...             # ElevenLabs voice ID for Bailey
@@ -28,7 +28,7 @@ Before starting, orient yourself:
   PAUSE_DURATION_MS=1000          # Silence length for [PAUSE] markers in ms (default: 1000)
   RSS_MAX_EPISODES=7              # Episodes to retain in RSS feed (default: 7)
   ```
-- [ ] Verify existing suite still passes: `uv run pytest`
+- [x] Verify existing suite still passes: `uv run pytest`
 
 ---
 
