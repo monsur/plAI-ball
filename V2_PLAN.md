@@ -66,7 +66,7 @@ Rules:
 - Banter should feel earned — 70% recaps, 30% reactions
 - If standings/streak data is in the prompt, weave it naturally into recaps
 
-**Temperature**: Raise from `0.2` → `0.7` in `openai_api.py` and `gemini.py`
+**Temperature**: Read from `LLM_TEMPERATURE` env var (default `0.7`) in `openai_api.py` and `gemini.py`
 
 ---
 
@@ -86,12 +86,17 @@ Rules:
 - Abe: a warm, authoritative male voice from ElevenLabs library
 - Bailey: a contrasting, more energetic male voice
 
-**Chunking strategy**: Group consecutive `(speaker, text)` pairs until the next addition would exceed 2,000 chars. Split at natural conversation boundaries (after a complete exchange) where possible. This gives ~5 API calls for a full episode vs. ~25 calls if chunking per line — fewer seams.
+**Chunking strategy**: Group consecutive `(speaker, text)` pairs until the next addition would exceed `AUDIO_CHUNK_SIZE` chars (default 1900). Split at natural conversation boundaries where possible. This gives ~5 API calls for a full episode vs. ~25 calls if chunking per line — fewer seams.
 
 **New functions in `audio.py`**:
 - `parse_transcript(text)` → list of `('ABE'|'BAILEY'|'PAUSE', text_or_None)`
-- `chunk_inputs(inputs, max_chars=2000)` → list of input batches
+- `chunk_inputs(inputs, max_chars)` → list of input batches
 - `inputs_to_el_format(chunk, voice_map)` → ElevenLabs-shaped dicts
+
+**Configurable constants** (read from env at module load):
+- `ELEVENLABS_MODEL` — ElevenLabs TTS model (default: `eleven_v3`)
+- `AUDIO_CHUNK_SIZE` — max chars per API call (default: `1900`)
+- `PAUSE_DURATION_MS` — silence length for `[PAUSE]` (default: `1000`)
 
 **Dependencies:** Add `pydub` and `elevenlabs` to `pyproject.toml`. Requires `ffmpeg` on the system.
 
@@ -117,6 +122,23 @@ Also add voice ID constants (or env vars) for Abe and Bailey's ElevenLabs voice 
 
 ---
 
+## Configurable Variables
+
+All tuneable values are environment variables with sensible defaults. None require a code change to adjust.
+
+| Env var | Default | Controls | File |
+|---|---|---|---|
+| `ELEVENLABS_API_KEY` | — | ElevenLabs API auth | `audio.py` |
+| `ABE_VOICE_ID` | — | ElevenLabs voice for Abe | `audio.py` |
+| `BAILEY_VOICE_ID` | — | ElevenLabs voice for Bailey | `audio.py` |
+| `LLM_TEMPERATURE` | `0.7` | LLM creativity | `openai_api.py`, `gemini.py` |
+| `ELEVENLABS_MODEL` | `eleven_v3` | ElevenLabs TTS model | `audio.py` |
+| `AUDIO_CHUNK_SIZE` | `1900` | Max chars per TTS API call | `audio.py` |
+| `PAUSE_DURATION_MS` | `1000` | Silence length for `[PAUSE]` markers | `audio.py` |
+| `RSS_MAX_EPISODES` | `7` | Episodes retained in RSS feed | `rss.py` |
+
+---
+
 ## Files to Modify
 
 | File | Change |
@@ -128,10 +150,13 @@ Also add voice ID constants (or env vars) for Abe and Bailey's ElevenLabs voice 
 | `podcaster/src/prompts/tts_voice.txt` | Remove (replaced by above) |
 | `podcaster/src/data.py` | Add `fetch_standings()` |
 | `podcaster/src/prompt.py` | Include standings block in assembled prompt |
-| `podcaster/src/openai_api.py` | Temperature 0.2 → 0.7 |
-| `podcaster/src/gemini.py` | Temperature 0.2 → 0.7 |
+| `podcaster/src/openai_api.py` | Temperature from `LLM_TEMPERATURE` env var |
+| `podcaster/src/gemini.py` | Temperature from `LLM_TEMPERATURE` env var |
+| `podcaster/src/rss.py` | Retention count from `RSS_MAX_EPISODES` env var |
 | `pyproject.toml` | Add `pydub` (already has `elevenlabs`) |
+| `.env.example` | Document all 8 env vars |
 | `tests/test_audio.py` | Update for new parse + chunk + concatenation logic |
+| `tests/test_rss.py` | Add `RSS_MAX_EPISODES` env var test |
 
 ---
 
