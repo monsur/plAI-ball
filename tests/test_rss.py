@@ -211,13 +211,13 @@ class TestRssFeedManagement:
 
     @patch("podcaster.src.rss.boto3")
     @patch("podcaster.src.rss.MP3")
-    def test_rss_respects_max_episodes_from_env(
+    def test_rss_respects_max_episodes_from_config(
         self, mock_mp3, mock_boto3, mock_args, tmp_path, monkeypatch
     ):
-        """When RSS_MAX_EPISODES=3 is set, only 3 items survive pruning."""
+        """When config.RSS_MAX_EPISODES is 3, only 3 items survive pruning."""
         from podcaster.src.rss import run
 
-        monkeypatch.setenv("RSS_MAX_EPISODES", "3")
+        monkeypatch.setattr("podcaster.src.config.RSS_MAX_EPISODES", 3)
 
         rss_xml = read_fixture("rss_base.xml")
         soup = BeautifulSoup(rss_xml, "xml")
@@ -257,10 +257,10 @@ class TestRssFeedManagement:
     def test_rss_max_episodes_defaults_to_7(
         self, mock_mp3, mock_boto3, mock_args, tmp_path, monkeypatch
     ):
-        """With no env var set, max_items falls back to 7."""
+        """The shipped config default is 7 — confirm the plumbing reads it."""
         from podcaster.src.rss import run
 
-        monkeypatch.delenv("RSS_MAX_EPISODES", raising=False)
+        monkeypatch.setattr("podcaster.src.config.RSS_MAX_EPISODES", 7)
 
         rss_xml = read_fixture("rss_base.xml")
         soup = BeautifulSoup(rss_xml, "xml")

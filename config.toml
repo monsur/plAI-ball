@@ -1,0 +1,30 @@
+# plAI ball configuration. Non-secret tunables live here; secrets (API keys)
+# remain in .env. Edit values here to change pipeline behavior without touching
+# code. No restart needed — each pipeline run reads this file fresh.
+
+[llm]
+# Creativity for transcript generation. 0.2 was the v1 default (factual); 0.7
+# gives the two-host banter more life.
+temperature = 0.7
+
+[audio]
+elevenlabs_model = "eleven_v3"
+# Max characters per ElevenLabs API call. Fewer/larger chunks mean fewer
+# audible stitching seams, but ElevenLabs imposes its own request-size limit.
+chunk_size = 1900
+# Silence length injected for each [PAUSE] marker in the transcript.
+pause_duration_ms = 1000
+# Shared seed across all ElevenLabs calls so voices don't drift between
+# chunks. Change to resample the whole episode with a new voice take.
+seed = 42
+
+[audio.voices]
+# ElevenLabs voice IDs. Current picks from the public default library:
+#   Adam  — "Dominant, Firm"                (Abe)
+#   Laura — "Enthusiast, Quirky Attitude"   (Bailey)
+abe = "pNInz6obpgDQGcFmaJgB"
+bailey = "FGY2WhTYpPnrIDTdsKH5"
+
+[rss]
+# Number of episodes retained in the published RSS feed.
+max_episodes = 7

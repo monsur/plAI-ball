@@ -5,20 +5,12 @@ from pathlib import Path
 from elevenlabs import ElevenLabs
 from pydub import AudioSegment
 from podcaster.src import args_helper
+from podcaster.src import config
 from podcaster.src import logger_helper
 
 logger = logger_helper.get_logger(__name__)
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
-
-VOICE_MAP = {
-    "ABE":    os.getenv("ABE_VOICE_ID"),
-    "BAILEY": os.getenv("BAILEY_VOICE_ID"),
-}
-ELEVENLABS_MODEL  = os.getenv("ELEVENLABS_MODEL", "eleven_v3")
-AUDIO_CHUNK_SIZE  = int(os.getenv("AUDIO_CHUNK_SIZE", "1900"))
-PAUSE_DURATION_MS = int(os.getenv("PAUSE_DURATION_MS", "1000"))
-AUDIO_SEED        = int(os.getenv("AUDIO_SEED", "42"))
 
 SPEAKER_LINE = re.compile(r"^(ABE|BAILEY):\s+(.+)$")
 PAUSE_LINE = re.compile(r"^\[PAUSE\]\s*$")
@@ -55,7 +47,7 @@ def chunk_inputs(segments, max_chars=None):
     reduces audible stitching seams in the final output.
     """
     if max_chars is None:
-        max_chars = AUDIO_CHUNK_SIZE
+        max_chars = config.AUDIO_CHUNK_SIZE
 
     chunks = []
     current = []
@@ -90,23 +82,25 @@ def run(args):
     transcript = transcript_path.read_text(encoding='utf-8')
 
     segments = parse_transcript(transcript)
-    chunks = chunk_inputs(segments, max_chars=AUDIO_CHUNK_SIZE)
+    chunks = chunk_inputs(segments, max_chars=config.AUDIO_CHUNK_SIZE)
+
+    voice_map = {"ABE": config.ABE_VOICE_ID, "BAILEY": config.BAILEY_VOICE_ID}
 
     output = AudioSegment.empty()
     try:
         for chunk in chunks:
             if len(chunk) == 1 and chunk[0][0] == 'PAUSE':
-                output += AudioSegment.silent(duration=PAUSE_DURATION_MS)
+                output += AudioSegment.silent(duration=config.PAUSE_DURATION_MS)
                 continue
 
             inputs = [
-                {"text": text, "voice_id": VOICE_MAP[speaker]}
+                {"text": text, "voice_id": voice_map[speaker]}
                 for speaker, text in chunk
             ]
             audio_bytes = b"".join(client.text_to_dialogue.convert(
                 inputs=inputs,
-                model_id=ELEVENLABS_MODEL,
-                seed=AUDIO_SEED,
+                model_id=config.ELEVENLABS_MODEL,
+                seed=config.AUDIO_SEED,
             ))
             output += AudioSegment.from_file(BytesIO(audio_bytes), format="mp3")
 

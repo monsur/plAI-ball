@@ -61,13 +61,13 @@ class TestParseTranscript:
 
 class TestChunkInputs:
     def test_chunk_respects_char_limit(self, monkeypatch):
-        """No chunk's total text length may exceed AUDIO_CHUNK_SIZE."""
-        from podcaster.src import audio
+        """No chunk's total text length may exceed config.AUDIO_CHUNK_SIZE."""
+        from podcaster.src import audio, config
 
-        monkeypatch.setattr(audio, "AUDIO_CHUNK_SIZE", 500)
+        monkeypatch.setattr(config, "AUDIO_CHUNK_SIZE", 500)
 
         segments = [("ABE", "x" * 200) for _ in range(10)]
-        chunks = audio.chunk_inputs(segments, max_chars=audio.AUDIO_CHUNK_SIZE)
+        chunks = audio.chunk_inputs(segments, max_chars=config.AUDIO_CHUNK_SIZE)
 
         for chunk in chunks:
             total = sum(len(text) for speaker, text in chunk if speaker != "PAUSE")
@@ -153,13 +153,13 @@ class TestAudioRun:
 
         mock_client = mock_elevenlabs_cls.return_value
         assert mock_client.text_to_dialogue.convert.call_count == 2
-        # Every call should pass the same AUDIO_SEED so chunk boundaries don't drift.
-        from podcaster.src.audio import AUDIO_SEED
+        # Every call should pass the same seed so chunk boundaries don't drift.
+        from podcaster.src import config
         seeds = {
             call.kwargs["seed"]
             for call in mock_client.text_to_dialogue.convert.call_args_list
         }
-        assert seeds == {AUDIO_SEED}
+        assert seeds == {config.AUDIO_SEED}
 
     @patch("podcaster.src.audio.AudioSegment")
     @patch("podcaster.src.audio.ElevenLabs")
@@ -180,10 +180,10 @@ class TestAudioRun:
 
         # AudioSegment.silent() should be called once, for the single PAUSE.
         assert mock_audio_segment.silent.call_count == 1
-        # And the duration should be PAUSE_DURATION_MS.
+        # And the duration should match the configured PAUSE_DURATION_MS.
         call_kwargs = mock_audio_segment.silent.call_args.kwargs
-        from podcaster.src.audio import PAUSE_DURATION_MS
-        assert call_kwargs["duration"] == PAUSE_DURATION_MS
+        from podcaster.src import config
+        assert call_kwargs["duration"] == config.PAUSE_DURATION_MS
 
     @patch("podcaster.src.audio.AudioSegment")
     @patch("podcaster.src.audio.ElevenLabs")

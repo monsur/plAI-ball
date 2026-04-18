@@ -118,10 +118,10 @@ class TestTranscriptRun:
 
 
 class TestLLMTemperature:
-    """Temperature is sourced from LLM_TEMPERATURE env var, defaulting to 0.7."""
+    """Temperature is sourced from config.LLM_TEMPERATURE."""
 
-    def test_openai_uses_temperature_from_env(self, monkeypatch):
-        monkeypatch.setenv("LLM_TEMPERATURE", "0.5")
+    def test_openai_uses_temperature_from_config(self, monkeypatch):
+        monkeypatch.setattr("podcaster.src.config.LLM_TEMPERATURE", 0.5)
         with patch("podcaster.src.openai_api.OpenAI") as mock_openai_cls:
             from podcaster.src.openai_api import OpenAIAPI
 
@@ -137,16 +137,17 @@ class TestLLMTemperature:
             create_kwargs = mock_client.chat.completions.create.call_args.kwargs
             assert create_kwargs["temperature"] == 0.5
 
-    def test_openai_temperature_defaults_to_0_7(self, monkeypatch):
-        monkeypatch.delenv("LLM_TEMPERATURE", raising=False)
+    def test_openai_temperature_reads_current_config_value(self):
+        """Whatever config.toml says at call time is what the client gets."""
+        from podcaster.src import config
         with patch("podcaster.src.openai_api.OpenAI"):
             from podcaster.src.openai_api import OpenAIAPI
 
             api = OpenAIAPI("gpt-5.4-mini")
-            assert api.temperature == 0.7
+            assert api.temperature == config.LLM_TEMPERATURE
 
-    def test_gemini_uses_temperature_from_env(self, monkeypatch):
-        monkeypatch.setenv("LLM_TEMPERATURE", "0.5")
+    def test_gemini_uses_temperature_from_config(self, monkeypatch):
+        monkeypatch.setattr("podcaster.src.config.LLM_TEMPERATURE", 0.5)
         with patch("podcaster.src.gemini.genai") as mock_genai, \
              patch("podcaster.src.gemini.types") as mock_types:
             from podcaster.src.gemini import Gemini
