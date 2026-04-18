@@ -84,9 +84,9 @@ Before starting, orient yourself:
 
 **Role:** Delivery instructions passed to ElevenLabs per speaker. `audio.py` selects the right file per speaker — it doesn't define voice behavior, it just routes.
 
-- [ ] Create `tts_abe.txt`: authoritative, measured; pulls back slightly after a final score or surprising stat to let it land; dry wit on banter lines
-- [ ] Create `tts_bailey.txt`: quicker delivery; rises on reactions; punchy emphasis on surprising stats; more animated on big moments
-- [ ] Delete `podcaster/src/prompts/tts_voice.txt` (replaced by the two above)
+- [x] Create `tts_abe.txt`: authoritative, measured; pulls back slightly after a final score or surprising stat to let it land; dry wit on banter lines
+- [x] Create `tts_bailey.txt`: quicker delivery; rises on reactions; punchy emphasis on surprising stats; more animated on big moments
+- [x] Delete `podcaster/src/prompts/tts_voice.txt` (replaced by the two above)
 
 *No unit tests for prompt files — verified by listening in end-to-end verification.*
 
