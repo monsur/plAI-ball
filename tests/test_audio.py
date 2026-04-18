@@ -153,6 +153,13 @@ class TestAudioRun:
 
         mock_client = mock_elevenlabs_cls.return_value
         assert mock_client.text_to_dialogue.convert.call_count == 2
+        # Every call should pass the same AUDIO_SEED so chunk boundaries don't drift.
+        from podcaster.src.audio import AUDIO_SEED
+        seeds = {
+            call.kwargs["seed"]
+            for call in mock_client.text_to_dialogue.convert.call_args_list
+        }
+        assert seeds == {AUDIO_SEED}
 
     @patch("podcaster.src.audio.AudioSegment")
     @patch("podcaster.src.audio.ElevenLabs")

@@ -18,6 +18,7 @@ VOICE_MAP = {
 ELEVENLABS_MODEL  = os.getenv("ELEVENLABS_MODEL", "eleven_v3")
 AUDIO_CHUNK_SIZE  = int(os.getenv("AUDIO_CHUNK_SIZE", "1900"))
 PAUSE_DURATION_MS = int(os.getenv("PAUSE_DURATION_MS", "1000"))
+AUDIO_SEED        = int(os.getenv("AUDIO_SEED", "42"))
 
 SPEAKER_LINE = re.compile(r"^(ABE|BAILEY):\s+(.+)$")
 PAUSE_LINE = re.compile(r"^\[PAUSE\]\s*$")
@@ -105,6 +106,7 @@ def run(args):
             audio_bytes = b"".join(client.text_to_dialogue.convert(
                 inputs=inputs,
                 model_id=ELEVENLABS_MODEL,
+                seed=AUDIO_SEED,
             ))
             output += AudioSegment.from_file(BytesIO(audio_bytes), format="mp3")
 
