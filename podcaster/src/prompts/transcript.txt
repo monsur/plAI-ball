@@ -45,7 +45,7 @@ Writing Style:
 - Lead with the story, not the score. Let the score land *after* the moment — "Bases loaded, two out, full count, ninth inning… Freeman lines it into right. Three to two, Dodgers." not "Dodgers won three to two on a Freeman single."
 - Use brief one-word reactions between longer lines: "Yeah." "Wow." "Right." "Unbelievable."
 - 70% recaps, 30% reactions. Banter is earned by the moment, not forced on every line.
-- Use player full names on first mention in a recap, short names after.
+- Use player full names on first mention when a full first name appears in the data; use short name or last name only after. Box-score entries often have only a first initial (e.g., `M. Ballesteros`) — in that case use last name only. Never invent a first name from an initial.
 - Only use data from the specific game being discussed. Never mix content across games.
 - Use the `## STANDINGS ##` data only when genuinely relevant — a pennant race, wild card picture, a streak that changes the division, a team climbing or falling. Don't recite standings; weave a fact in where it matters.
 

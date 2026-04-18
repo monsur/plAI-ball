@@ -278,13 +278,7 @@ Observations captured during implementation. Not blockers — revisit after the 
 
 ### Step 2 — Transcript prompt tuning
 
-From exercising the new prompt against real data (`20260417`, gpt-5.4-mini, 15 games):
+Reassessed against a fresh `20260417` run (temp 0.7, two-host prompt, standings block). The original length and standings-usage concerns resolved themselves — the model now hits the per-section word targets and weaves standings in contextually without reciting the table.
 
-- **Length calibration is off.** Top-story recaps came in ~130–150 words (spec says 150–200, slightly under). Rapid-fire recaps came in ~80–120 words (spec says 30–50, way over). The model is being generous across the board. Consider tightening the rapid-fire guidance — maybe a hard ceiling or an explicit example of a 30-word rapid-fire exchange so the model has a clear target.
-- **Hallucinated player names.** "Matt Ballesteros" appeared in a Cubs recap with no basis in the source data. The prompt should probably add an explicit "only use player names that appear in the game data" rule. Worth auditing a few more runs to see how frequent this is.
-- **`## STANDINGS ##` usage is untested.** Steps 5 and 6 haven't run yet, so we haven't seen whether the model weaves standings in naturally or ignores the block entirely.
-
-### Step 7 — Audio pipeline runtime deps
-
-- **`ffmpeg` is required at runtime.** `pydub` uses ffmpeg (or avconv) to decode the MP3 bytes returned by ElevenLabs and to encode the final MP3. The unit tests mock `AudioSegment` entirely so they pass without it, but the actual `audio.run()` will fail until `ffmpeg` is installed (`sudo apt install ffmpeg` on this box).
+One narrower issue noted and addressed: the v1 run produced "Matt Ballesteros" and v2 produced "Michael Ballesteros" — the player is real (`M. Ballesteros` in the box score), but the model was inventing a first name from the initial. The prompt now explicitly forbids expanding an initial into a guessed first name. Worth auditing future runs to confirm the rule holds.
 
