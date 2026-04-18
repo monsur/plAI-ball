@@ -151,6 +151,11 @@ def run(args):
         return
 
     content = f"There are {len(files)} games in this prompt."
+
+    standings_path = Path(args.output_dir) / "standings.txt"
+    if standings_path.exists():
+        content += "\n\n## STANDINGS ##\n\n" + standings_path.read_text(encoding='utf-8')
+
     for filename in files:
         content += "\n\n## GAME ##\n\n"
         content += process_file(filename)

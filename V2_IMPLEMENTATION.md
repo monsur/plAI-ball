@@ -139,14 +139,14 @@ Before starting, orient yourself:
 
 **Role:** Assembles all fetched data into the LLM prompt. Does not fetch data or call external APIs — reads files and formats text only.
 
-- [ ] After assembling the games block, check if `{args.output_dir}/standings.txt` exists
-- [ ] If present: prepend a `## STANDINGS ##\n{standings_text}\n\n` block before the first `## GAME ##`
-- [ ] If absent: proceed without it — no error, no warning
+- [x] After assembling the games block, check if `{args.output_dir}/standings.txt` exists
+- [x] If present: prepend a `## STANDINGS ##\n{standings_text}\n\n` block before the first `## GAME ##`
+- [x] If absent: proceed without it — no error, no warning
 
 **Tests** (`tests/test_prompt.py`):
-- [ ] Add `test_run_includes_standings_when_file_present` — write a `standings.txt` fixture, assert `## STANDINGS ##` appears in `prompt.txt` before the first `## GAME ##`
-- [ ] Add `test_run_omits_standings_when_file_absent` — no `standings.txt`, assert `## STANDINGS ##` does not appear in `prompt.txt`
-- [ ] Run: `uv run pytest tests/test_prompt.py` — all pass before continuing
+- [x] Add `test_run_includes_standings_when_file_present` — write a `standings.txt` fixture, assert `## STANDINGS ##` appears in `prompt.txt` before the first `## GAME ##`
+- [x] Add `test_run_omits_standings_when_file_absent` — no `standings.txt`, assert `## STANDINGS ##` does not appear in `prompt.txt`
+- [x] Run: `uv run pytest tests/test_prompt.py` — all pass before continuing
 
 ---
 
