@@ -3,6 +3,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from podcaster.src import args_helper
+from podcaster.src import config
 from podcaster.src import http_helper
 from podcaster.src import logger_helper
 
@@ -14,7 +15,7 @@ def fetch_standings(args):
     Non-fatal: any failure is logged and swallowed. Standings are nice-to-have,
     not required for the pipeline to continue.
     """
-    url = "https://www.espn.com/mlb/standings"
+    url = f"{config.ESPN_BASE_URL}/mlb/standings"
     try:
         html = http_helper.make_request(url)
         if not html:
@@ -87,7 +88,7 @@ def run(args):
         # Save HTML content
         (Path(args.output_data_dir) / filename).write_text(html, encoding='utf-8')
 
-    source_url = f"https://www.espn.com/mlb/scoreboard/_/date/{args.date}"
+    source_url = f"{config.ESPN_BASE_URL}/mlb/scoreboard/_/date/{args.date}"
     logger.info(f"Fetching box scores from: {source_url}")
 
     source_html = http_helper.make_request(source_url)

@@ -24,3 +24,8 @@ ABE_VOICE_ID    = _cfg["audio"]["voices"]["abe"]
 BAILEY_VOICE_ID = _cfg["audio"]["voices"]["bailey"]
 
 RSS_MAX_EPISODES = _cfg["rss"]["max_episodes"]
+
+S3_BUCKET = _cfg["s3"]["bucket"]
+
+ESPN_BASE_URL      = _cfg["data"]["espn_base_url"]
+HTTP_DELAY_SECONDS = _cfg["data"]["http_delay_seconds"]

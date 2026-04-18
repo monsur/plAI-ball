@@ -28,3 +28,16 @@ bailey = "FGY2WhTYpPnrIDTdsKH5"
 [rss]
 # Number of episodes retained in the published RSS feed.
 max_episodes = 7
+
+[s3]
+# Bucket for audio, transcript, and archive uploads. Also used to build the
+# public URLs embedded in the RSS feed.
+bucket = "plai-ball"
+
+[data]
+# Base URL for ESPN scraping. Centralized here so a future mirror or cache
+# URL only needs one edit.
+espn_base_url = "https://www.espn.com"
+# Seconds to sleep between sequential ESPN requests to stay polite. Also
+# the default for --delay on the CLI.
+http_delay_seconds = 2
