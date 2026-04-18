@@ -179,37 +179,37 @@ This is the most complex step. Implement as three focused functions, writing and
 
 ### 7a — `parse_transcript`
 
-- [ ] Implement `parse_transcript(text) → list[tuple[str, str | None]]`:
+- [x] Implement `parse_transcript(text) → list[tuple[str, str | None]]`:
   - Lines matching `^(ABE|BAILEY):\s+(.+)` → `('ABE'|'BAILEY', text)`
   - Lines matching `^\[PAUSE\]` → `('PAUSE', None)`
   - All other lines ignored (blank lines, headers, etc.)
 
-- [ ] **Tests** (`tests/test_audio.py`):
-  - [ ] `test_parse_speaker_lines` — `ABE:` and `BAILEY:` lines → correct `(speaker, text)` tuples
-  - [ ] `test_parse_pause_lines` — `[PAUSE]` → `('PAUSE', None)`
-  - [ ] `test_parse_ignores_unknown_lines` — blank lines and untagged text skipped
-  - [ ] `test_parse_emotion_tags_preserved` — emotion tags stay in the text, not stripped
+- [x] **Tests** (`tests/test_audio.py`):
+  - [x] `test_parse_speaker_lines` — `ABE:` and `BAILEY:` lines → correct `(speaker, text)` tuples
+  - [x] `test_parse_pause_lines` — `[PAUSE]` → `('PAUSE', None)`
+  - [x] `test_parse_ignores_unknown_lines` — blank lines and untagged text skipped
+  - [x] `test_parse_emotion_tags_preserved` — emotion tags stay in the text, not stripped
 
-- [ ] Run: `uv run pytest tests/test_audio.py::test_parse*` — all pass before continuing
+- [x] Run: `uv run pytest tests/test_audio.py::test_parse*` — all pass before continuing
 
 ### 7b — `chunk_inputs`
 
-- [ ] Implement `chunk_inputs(segments, max_chars=1900) → list[list]`:
+- [x] Implement `chunk_inputs(segments, max_chars=1900) → list[list]`:
   - Groups consecutive `(speaker, text)` pairs into batches where total char count ≤ `max_chars`
   - `('PAUSE', None)` sentinels are never merged into a chunk — kept as standalone markers
   - Split at natural exchange boundaries where possible
   - Goal: ~5 chunks for a full episode, not ~25 — fewer chunks = fewer stitching seams
 
-- [ ] **Tests** (`tests/test_audio.py`):
-  - [ ] `test_chunk_respects_char_limit` — set `AUDIO_CHUNK_SIZE=500` via monkeypatch, assert no chunk exceeds that limit
-  - [ ] `test_chunk_keeps_pause_separate` — `PAUSE` sentinels never appear inside a text chunk
-  - [ ] `test_chunk_groups_exchanges` — multiple short lines grouped into one chunk when under limit
+- [x] **Tests** (`tests/test_audio.py`):
+  - [x] `test_chunk_respects_char_limit` — set `AUDIO_CHUNK_SIZE=500` via monkeypatch, assert no chunk exceeds that limit
+  - [x] `test_chunk_keeps_pause_separate` — `PAUSE` sentinels never appear inside a text chunk
+  - [x] `test_chunk_groups_exchanges` — multiple short lines grouped into one chunk when under limit
 
-- [ ] Run: `uv run pytest tests/test_audio.py::test_chunk*` — all pass before continuing
+- [x] Run: `uv run pytest tests/test_audio.py::test_chunk*` — all pass before continuing
 
 ### 7c — `run`
 
-- [ ] Implement full `run(args)`:
+- [x] Implement full `run(args)`:
   ```
   Read {date}-transcript.txt
   → parse_transcript()
@@ -222,7 +222,7 @@ This is the most complex step. Implement as three focused functions, writing and
   → export to {date}-audio.mp3
   ```
 
-- [ ] Wire up voice map, ElevenLabs client, and configurable constants at module level:
+- [x] Wire up voice map, ElevenLabs client, and configurable constants at module level:
   ```python
   VOICE_MAP = {
       "ABE":    os.getenv("ABE_VOICE_ID"),
@@ -235,15 +235,15 @@ This is the most complex step. Implement as three focused functions, writing and
   client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
   ```
 
-- [ ] Pass `ELEVENLABS_MODEL` to `text_to_dialogue.convert()`, `AUDIO_CHUNK_SIZE` to `chunk_inputs()`, and `PAUSE_DURATION_MS` to `AudioSegment.silent()`
-- [ ] Remove OpenAI TTS import and all `gpt-4o-mini-tts` references
+- [x] Pass `ELEVENLABS_MODEL` to `text_to_dialogue.convert()`, `AUDIO_CHUNK_SIZE` to `chunk_inputs()`, and `PAUSE_DURATION_MS` to `AudioSegment.silent()`
+- [x] Remove OpenAI TTS import and all `gpt-4o-mini-tts` references
 
-- [ ] **Tests** (`tests/test_audio.py`):
-  - [ ] `test_run_calls_elevenlabs_per_chunk` — mocked ElevenLabs client called once per chunk
-  - [ ] `test_run_injects_silence_for_pause` — silence segment appears at correct position in output
-  - [ ] `test_run_writes_mp3` — output file created at expected path
+- [x] **Tests** (`tests/test_audio.py`):
+  - [x] `test_run_calls_elevenlabs_per_chunk` — mocked ElevenLabs client called once per chunk
+  - [x] `test_run_injects_silence_for_pause` — silence segment appears at correct position in output
+  - [x] `test_run_writes_mp3` — output file created at expected path
 
-- [ ] Run: `uv run pytest tests/test_audio.py` — full file passes before continuing
+- [x] Run: `uv run pytest tests/test_audio.py` — full file passes before continuing
 
 ---
 
@@ -283,4 +283,8 @@ From exercising the new prompt against real data (`20260417`, gpt-5.4-mini, 15 g
 - **Length calibration is off.** Top-story recaps came in ~130–150 words (spec says 150–200, slightly under). Rapid-fire recaps came in ~80–120 words (spec says 30–50, way over). The model is being generous across the board. Consider tightening the rapid-fire guidance — maybe a hard ceiling or an explicit example of a 30-word rapid-fire exchange so the model has a clear target.
 - **Hallucinated player names.** "Matt Ballesteros" appeared in a Cubs recap with no basis in the source data. The prompt should probably add an explicit "only use player names that appear in the game data" rule. Worth auditing a few more runs to see how frequent this is.
 - **`## STANDINGS ##` usage is untested.** Steps 5 and 6 haven't run yet, so we haven't seen whether the model weaves standings in naturally or ignores the block entirely.
+
+### Step 7 — Audio pipeline runtime deps
+
+- **`ffmpeg` is required at runtime.** `pydub` uses ffmpeg (or avconv) to decode the MP3 bytes returned by ElevenLabs and to encode the final MP3. The unit tests mock `AudioSegment` entirely so they pass without it, but the actual `audio.run()` will fail until `ffmpeg` is installed (`sudo apt install ffmpeg` on this box).
 
