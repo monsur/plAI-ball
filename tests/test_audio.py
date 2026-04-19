@@ -46,8 +46,14 @@ class TestParseTranscript:
             ("BAILEY", "Let's go."),
         ]
 
-    def test_parse_emotion_tags_preserved(self):
-        """Emotion tags like [excited] are part of the spoken text and must survive parsing."""
+    def test_parse_bracket_text_preserved(self):
+        """Brackets in dialogue are parsed verbatim.
+
+        The transcript prompt no longer emits bracket cues like [excited]
+        (see STATUS.md / V2_COST_PLAN step 5). But the parser remains lenient
+        so stray brackets don't silently drop the line — they just pass
+        through and whatever reaches the TTS input is what the model sees.
+        """
         from podcaster.src.audio import parse_transcript
 
         text = "ABE: [excited] Huge swing!\nBAILEY: [laughs] Unbelievable."
@@ -78,7 +84,7 @@ class TestChunkInputs:
 
         segments = [
             ("ABE", "hello"),
-            ("BAILEY", "hi"),
+            ("ABE", "more"),
             ("PAUSE", None),
             ("ABE", "next topic"),
         ]
@@ -93,8 +99,8 @@ class TestChunkInputs:
             if "PAUSE" in speakers:
                 assert speakers == {"PAUSE"}
 
-    def test_chunk_groups_exchanges(self):
-        """Short lines that fit under the limit should share a single chunk."""
+    def test_chunk_splits_on_speaker_switch(self):
+        """A speaker switch must force a new chunk, even under the char limit."""
         from podcaster.src.audio import chunk_inputs
 
         segments = [
@@ -105,21 +111,39 @@ class TestChunkInputs:
         ]
         chunks = chunk_inputs(segments, max_chars=1000)
 
+        assert len(chunks) == 4
+        for chunk in chunks:
+            speakers = {s for s, _ in chunk}
+            assert len(speakers) == 1
+
+    def test_chunk_groups_same_speaker_runs(self):
+        """Consecutive same-speaker lines should share a chunk under the limit."""
+        from podcaster.src.audio import chunk_inputs
+
+        segments = [
+            ("ABE", "first line"),
+            ("ABE", "second line"),
+            ("ABE", "third line"),
+        ]
+        chunks = chunk_inputs(segments, max_chars=1000)
+
         assert len(chunks) == 1
-        assert len(chunks[0]) == 4
+        assert len(chunks[0]) == 3
 
 
 class TestAudioRun:
     def _write_transcript(self, mock_args, text):
         (Path(mock_args.output_dir) / f"{mock_args.date}-transcript.txt").write_text(text)
 
-    def _setup_mocks(self, mock_elevenlabs_cls, mock_audio_segment):
+    def _setup_mocks(self, mock_openai_cls, mock_audio_segment):
         mock_client = MagicMock()
-        mock_elevenlabs_cls.return_value = mock_client
-        # Fresh iterator per call so convert() can be invoked multiple times.
-        mock_client.text_to_dialogue.convert.side_effect = lambda **kw: iter([b"fake-mp3-bytes"])
+        mock_openai_cls.return_value = mock_client
+        # Each create() call returns an object with a .content bytes attribute.
+        mock_response = MagicMock()
+        mock_response.content = b"fake-mp3-bytes"
+        mock_client.audio.speech.create.return_value = mock_response
 
-        # A single shared segment with __iadd__/__add__ returning itself, so the
+        # A shared accumulator with __iadd__/__add__ returning itself, so the
         # running `output += ...` accumulates calls on one trackable object.
         accumulator = MagicMock()
         accumulator.__iadd__ = lambda self, other: accumulator
@@ -131,14 +155,14 @@ class TestAudioRun:
         return mock_client, accumulator
 
     @patch("podcaster.src.audio.AudioSegment")
-    @patch("podcaster.src.audio.ElevenLabs")
-    def test_run_calls_elevenlabs_per_chunk(
-        self, mock_elevenlabs_cls, mock_audio_segment, mock_args
+    @patch("podcaster.src.audio.OpenAI")
+    def test_run_calls_tts_per_chunk(
+        self, mock_openai_cls, mock_audio_segment, mock_args
     ):
         from podcaster.src.audio import run
 
-        _, accumulator = self._setup_mocks(mock_elevenlabs_cls, mock_audio_segment)
-        # Three short lines + one PAUSE + two short lines → 2 dialogue chunks.
+        self._setup_mocks(mock_openai_cls, mock_audio_segment)
+        # Three speaker switches + one PAUSE + two more → 5 TTS chunks.
         transcript = (
             "ABE: one.\n"
             "BAILEY: two.\n"
@@ -151,48 +175,107 @@ class TestAudioRun:
 
         run(mock_args)
 
-        mock_client = mock_elevenlabs_cls.return_value
-        assert mock_client.text_to_dialogue.convert.call_count == 2
-        # Every call should pass the same seed so chunk boundaries don't drift.
-        from podcaster.src import config
-        seeds = {
-            call.kwargs["seed"]
-            for call in mock_client.text_to_dialogue.convert.call_args_list
-        }
-        assert seeds == {config.AUDIO_SEED}
+        mock_client = mock_openai_cls.return_value
+        assert mock_client.audio.speech.create.call_count == 5
 
     @patch("podcaster.src.audio.AudioSegment")
-    @patch("podcaster.src.audio.ElevenLabs")
-    def test_run_injects_silence_for_pause(
-        self, mock_elevenlabs_cls, mock_audio_segment, mock_args
+    @patch("podcaster.src.audio.OpenAI")
+    def test_run_passes_correct_voice_and_instructions(
+        self, mock_openai_cls, mock_audio_segment, mock_args
     ):
         from podcaster.src.audio import run
+        from podcaster.src import config
 
-        _, accumulator = self._setup_mocks(mock_elevenlabs_cls, mock_audio_segment)
+        self._setup_mocks(mock_openai_cls, mock_audio_segment)
+        transcript = "ABE: hello.\nBAILEY: hi.\n"
+        self._write_transcript(mock_args, transcript)
+
+        run(mock_args)
+
+        mock_client = mock_openai_cls.return_value
+        calls = mock_client.audio.speech.create.call_args_list
+        abe_call, bailey_call = calls[0], calls[1]
+
+        assert abe_call.kwargs["voice"] == config.ABE_VOICE
+        assert bailey_call.kwargs["voice"] == config.BAILEY_VOICE
+        # Instructions should come from the per-host prompt files.
+        assert "Abe" in abe_call.kwargs["instructions"]
+        assert "Bailey" in bailey_call.kwargs["instructions"]
+        assert abe_call.kwargs["model"] == config.OPENAI_TTS_MODEL
+        assert abe_call.kwargs["response_format"] == "mp3"
+
+    @patch("podcaster.src.audio.AudioSegment")
+    @patch("podcaster.src.audio.OpenAI")
+    def test_run_injects_silence_for_pause(
+        self, mock_openai_cls, mock_audio_segment, mock_args
+    ):
+        from podcaster.src.audio import run
+        from podcaster.src import config
+
+        self._setup_mocks(mock_openai_cls, mock_audio_segment)
+        # ABE → PAUSE → ABE: the silent() call for the PAUSE should use
+        # PAUSE_DURATION_MS, not TURN_GAP_MS. Since speaker doesn't switch
+        # across the pause, no TURN_GAP_MS silence should be added either.
         transcript = (
             "ABE: setup.\n"
             "[PAUSE]\n"
-            "BAILEY: reaction.\n"
+            "ABE: continuation.\n"
         )
         self._write_transcript(mock_args, transcript)
 
         run(mock_args)
 
-        # AudioSegment.silent() should be called once, for the single PAUSE.
-        assert mock_audio_segment.silent.call_count == 1
-        # And the duration should match the configured PAUSE_DURATION_MS.
-        call_kwargs = mock_audio_segment.silent.call_args.kwargs
-        from podcaster.src import config
-        assert call_kwargs["duration"] == config.PAUSE_DURATION_MS
+        silent_calls = mock_audio_segment.silent.call_args_list
+        durations = [c.kwargs["duration"] for c in silent_calls]
+        assert config.PAUSE_DURATION_MS in durations
+        assert config.TURN_GAP_MS not in durations
 
     @patch("podcaster.src.audio.AudioSegment")
-    @patch("podcaster.src.audio.ElevenLabs")
+    @patch("podcaster.src.audio.OpenAI")
+    def test_run_inserts_turn_gap_on_speaker_switch(
+        self, mock_openai_cls, mock_audio_segment, mock_args
+    ):
+        from podcaster.src.audio import run
+        from podcaster.src import config
+
+        self._setup_mocks(mock_openai_cls, mock_audio_segment)
+        # Two speakers, no PAUSE — one TURN_GAP_MS silence should be inserted.
+        transcript = "ABE: hello.\nBAILEY: hi.\n"
+        self._write_transcript(mock_args, transcript)
+
+        run(mock_args)
+
+        silent_calls = mock_audio_segment.silent.call_args_list
+        durations = [c.kwargs["duration"] for c in silent_calls]
+        assert durations.count(config.TURN_GAP_MS) == 1
+
+    @patch("podcaster.src.audio.AudioSegment")
+    @patch("podcaster.src.audio.OpenAI")
+    def test_run_no_turn_gap_within_same_speaker(
+        self, mock_openai_cls, mock_audio_segment, mock_args
+    ):
+        from podcaster.src.audio import run
+        from podcaster.src import config
+
+        self._setup_mocks(mock_openai_cls, mock_audio_segment)
+        # Same speaker three times — no TURN_GAP_MS should be added.
+        transcript = "ABE: one.\nABE: two.\nABE: three.\n"
+        self._write_transcript(mock_args, transcript)
+
+        run(mock_args)
+
+        silent_calls = mock_audio_segment.silent.call_args_list
+        durations = [c.kwargs["duration"] for c in silent_calls]
+        assert config.TURN_GAP_MS not in durations
+
+    @patch("podcaster.src.audio.AudioSegment")
+    @patch("podcaster.src.audio.OpenAI")
     def test_run_writes_mp3(
-        self, mock_elevenlabs_cls, mock_audio_segment, mock_args
+        self, mock_openai_cls, mock_audio_segment, mock_args
     ):
         from podcaster.src.audio import run
 
-        _, accumulator = self._setup_mocks(mock_elevenlabs_cls, mock_audio_segment)
+        _, accumulator = self._setup_mocks(mock_openai_cls, mock_audio_segment)
         transcript = "ABE: hello.\nBAILEY: hi.\n"
         self._write_transcript(mock_args, transcript)
 
@@ -202,3 +285,28 @@ class TestAudioRun:
         args_, kwargs_ = accumulator.export.call_args
         assert str(args_[0]).endswith(f"{mock_args.date}-audio.mp3")
         assert kwargs_.get("format") == "mp3"
+
+    @patch("podcaster.src.audio.AudioSegment")
+    @patch("podcaster.src.audio.OpenAI")
+    def test_run_reraises_on_tts_failure(
+        self, mock_openai_cls, mock_audio_segment, mock_args
+    ):
+        """TTS failures must surface, not be swallowed.
+
+        Prior behavior caught-and-logged, which caused a downstream crash in
+        rss.py when the MP3 was missing — masking the real cause (quota
+        exceeded / auth failure). Re-raising keeps the actual error at the
+        top of the workflow log.
+        """
+        import pytest
+        from podcaster.src.audio import run
+
+        self._setup_mocks(mock_openai_cls, mock_audio_segment)
+        mock_client = mock_openai_cls.return_value
+        mock_client.audio.speech.create.side_effect = RuntimeError("quota_exceeded")
+
+        transcript = "ABE: hello.\n"
+        self._write_transcript(mock_args, transcript)
+
+        with pytest.raises(RuntimeError, match="quota_exceeded"):
+            run(mock_args)
