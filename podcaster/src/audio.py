@@ -128,6 +128,7 @@ def run(args):
         output.export(out_path, format="mp3")
     except Exception as e:
         logger.error(f"Error generating audio: {e}")
+        raise
 
 
 if __name__ == "__main__":

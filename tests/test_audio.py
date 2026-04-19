@@ -285,3 +285,28 @@ class TestAudioRun:
         args_, kwargs_ = accumulator.export.call_args
         assert str(args_[0]).endswith(f"{mock_args.date}-audio.mp3")
         assert kwargs_.get("format") == "mp3"
+
+    @patch("podcaster.src.audio.AudioSegment")
+    @patch("podcaster.src.audio.OpenAI")
+    def test_run_reraises_on_tts_failure(
+        self, mock_openai_cls, mock_audio_segment, mock_args
+    ):
+        """TTS failures must surface, not be swallowed.
+
+        Prior behavior caught-and-logged, which caused a downstream crash in
+        rss.py when the MP3 was missing — masking the real cause (quota
+        exceeded / auth failure). Re-raising keeps the actual error at the
+        top of the workflow log.
+        """
+        import pytest
+        from podcaster.src.audio import run
+
+        self._setup_mocks(mock_openai_cls, mock_audio_segment)
+        mock_client = mock_openai_cls.return_value
+        mock_client.audio.speech.create.side_effect = RuntimeError("quota_exceeded")
+
+        transcript = "ABE: hello.\n"
+        self._write_transcript(mock_args, transcript)
+
+        with pytest.raises(RuntimeError, match="quota_exceeded"):
+            run(mock_args)
