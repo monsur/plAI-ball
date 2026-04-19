@@ -15,13 +15,13 @@ with _CONFIG_PATH.open("rb") as f:
 
 LLM_TEMPERATURE = _cfg["llm"]["temperature"]
 
-ELEVENLABS_MODEL  = _cfg["audio"]["elevenlabs_model"]
+OPENAI_TTS_MODEL  = _cfg["audio"]["openai_tts_model"]
 AUDIO_CHUNK_SIZE  = _cfg["audio"]["chunk_size"]
 PAUSE_DURATION_MS = _cfg["audio"]["pause_duration_ms"]
-AUDIO_SEED        = _cfg["audio"]["seed"]
+TURN_GAP_MS       = _cfg["audio"]["turn_gap_ms"]
 
-ABE_VOICE_ID    = _cfg["audio"]["voices"]["abe"]
-BAILEY_VOICE_ID = _cfg["audio"]["voices"]["bailey"]
+ABE_VOICE    = _cfg["audio"]["voices"]["abe"]
+BAILEY_VOICE = _cfg["audio"]["voices"]["bailey"]
 
 RSS_MAX_EPISODES = _cfg["rss"]["max_episodes"]
 
