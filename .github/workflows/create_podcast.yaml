@@ -6,6 +6,7 @@ run-name: "Creating Podcast"
 on:
   schedule:
     - cron: "0 10 * * *"
+  workflow_dispatch:
 
 jobs:
   Create-Podcast:
