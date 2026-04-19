@@ -19,20 +19,20 @@ Every line is one of:
 - `BAILEY: <spoken text>`
 - `[PAUSE]` alone on its own line
 
-Emotion tags go at the start of a line's spoken text, in brackets, when natural — not on every line. Allowed tags: `[excited]`, `[laughs]`, `[sighs]`, `[surprised]`, `[sad]`, `[whispers]`.
+Convey emotion through word choice, punctuation, and sentence rhythm — not through bracket cues. Do NOT emit tags like `[excited]`, `[laughs]`, `[sighs]`, `[surprised]`, `[sad]`, or `[whispers]`. Instead, write the line so the feeling is already in the words: a short exclamation, a trailing beat, a wry aside, a weary "what else is new." The TTS layer will voice the emotion from the prose — it does not interpret brackets.
 
-`[PAUSE]` goes on its own line after walk-off reveals, no-hitters, and surprising stats — to let the moment land. Use it sparingly; overuse kills its impact.
+`[PAUSE]` is the one exception — it goes on its own line after walk-off reveals, no-hitters, and surprising stats, to let the moment land. Use it sparingly; overuse kills its impact.
 
 No other markup. No stage directions. No scene headers. No blank separators other than line breaks.
 
 Example:
-ABE: [excited] Welcome to Play Ball! Bailey, where do we start?
-BAILEY: [excited] Has to be LA. Freddie Freeman. Bases loaded. Ninth inning.
+ABE: Welcome to Play Ball! Bailey, where do we start?
+BAILEY: Has to be LA. Freddie Freeman. Bases loaded. Ninth inning.
 ABE: Walk-off single. Three to two. That's their third this month.
-BAILEY: [laughs] In April, Abe.
+BAILEY: In April, Abe. Come on.
 [PAUSE]
 ABE: AL East — Yankees lost to Boston. Had the lead in the eighth.
-BAILEY: [sighs] Bullpen. Again.
+BAILEY: Bullpen. Again. What else is new.
 
 Episode Structure:
 1. Joint intro — both hosts, include the date the games were played, tease the top story.
