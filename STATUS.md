@@ -1,7 +1,7 @@
 # Status
 
 **Status:** Active <!-- Active | Paused | Blocked | Done -->
-**Updated:** 2026-04-18
+**Updated:** 2026-04-19
 
 ## Summary
 
@@ -9,29 +9,27 @@ Daily AI-generated MLB baseball podcast, published via RSS. Fetches ESPN game da
 
 ## Last Session
 
-- Implemented all 7 steps of `V2_IMPLEMENTATION.md` — dependency wiring, two-host transcript prompt, split per-host TTS prompts, `LLM_TEMPERATURE` knob, ESPN standings fetch, `## STANDINGS ##` prompt injection, RSS retention knob, and the ElevenLabs + pydub audio pipeline
-- Added `AUDIO_SEED` after noticing cross-chunk voice drift — shared seed on every `text_to_dialogue.convert()` call keeps the voices consistent across stitched segments
-- Tightened the transcript prompt to forbid guessing a first name from an initial — data row `M. Ballesteros` was producing "Matt Ballesteros" one run and "Michael Ballesteros" the next
-- Refactored non-secrets out of `.env` into a new `config.toml` + `podcaster/src/config.py` loader, so tunables can be edited on the fly without code changes; `.env` now only holds API keys / AWS creds
-- Merged `v2` → `main` (commit `154cb30`) and wired the daily cron workflow for the v2 runtime: added an `ffmpeg` install step (pydub needs it at runtime) and threaded `ELEVENLABS_API_KEY` through the env block
-- Fixed a CI test regression — `pydub` imports `audioop`, which was removed in Python 3.13. Pinned both workflows to Python 3.12, matching `pyproject.toml`
-- Finished issue #23 (now closed) — moved remaining hardcoded values (S3 bucket, ESPN base URL, HTTP delay default) into `config.toml`
+- Swapped ElevenLabs `text_to_dialogue` for per-host OpenAI `gpt-4o-mini-tts` calls stitched via pydub — same two-host architecture, ~$0.23/episode (was ~$1), no quota wall. Merged to main (commit `700cf0f`). Plan captured in `V2_COST_PLAN.md`.
+- Root-caused yesterday's cron failure — ElevenLabs quota 401 burned down to 318 credits during v2 trial runs. `audio.run()` was swallowing the exception, which caused a misleading mutagen `FileNotFoundError` downstream in `rss.py`. Now re-raises after logging so the real error lands at the top of the workflow log.
+- Stopped emitting bracket cues (`[excited]`, `[sighs]`, etc.) in `transcript.txt` — OpenAI TTS handles them probabilistically (sometimes performs, sometimes reads the word aloud). Emotion now carried by prose; persona wired in via `tts_abe.txt` / `tts_bailey.txt` through OpenAI's `instructions=` parameter (these per-host prompts existed since v2 but were never actually used).
+- `chunk_inputs()` now splits on speaker switch — one chunk = one TTS call with the right voice. Added `TURN_GAP_MS` silence on speaker transitions to soften the loss of dialogue-aware pacing.
+- Dropped `elevenlabs` dep and `ELEVENLABS_API_KEY`; added `workflow_dispatch` to the Create Podcast workflow for manual triggers. Tests 85 → 90.
 
 ## Next
 
-- Monitor the daily cron output for a few days — watch for the first-name-from-initials rule holding, general transcript quality at temp 0.7, and any ElevenLabs stitching issues at the new seed
-- Resolve ElevenLabs quota — last audio run hit the wall (318 credits remaining vs. 1523 needed for a full 15-game episode). Either upgrade the plan or confirm the scheduled run won't hit the same cap
-- Remaining open issues worth picking up after the v2 trial settles: **#18** retry logic for network calls (high priority), **#24** validation between pipeline steps, **#22** type hints, **#25** concurrent ESPN scraping
+- Trigger the Create Podcast workflow manually (`gh workflow run create_podcast.yaml`) to verify the new pipeline end-to-end before the scheduled cron — watch for voice quality on a real 15-game transcript, not just the sample dialogue
+- After one clean cron run, delete the `v2-cost-per-host-tts` branch (local + remote)
+- Outstanding issues: **#18** retry logic (high priority), **#24** validation between pipeline steps, **#22** type hints, **#25** concurrent ESPN scraping
 
 ## Notes
 
-- v2 is live on `main`; the `v2` branch is retained locally and on the remote as a rollback reference (safe to delete once the trial period ends)
-- Pipeline stages: ESPN scraping → prompt assembly → LLM transcript → ElevenLabs audio → RSS publish → S3 archive
-- Two hosts: Abe (Adam voice `pNInz6obpgDQGcFmaJgB`) and Bailey (Laura voice `FGY2WhTYpPnrIDTdsKH5`) — IDs pulled from the ElevenLabs public premade library, stored in `config.toml`
-- `config.toml` at the repo root now holds all non-secret tunables: `[llm]`, `[audio]`, `[audio.voices]`, `[rss]`, `[s3]`, `[data]`. `.env` has 5 keys only (OpenAI, Gemini, ElevenLabs, 2× AWS)
-- Quirk worth remembering: **GitHub Actions scheduled workflows run from the default branch** — cron triggers always read the workflow file from `main`, regardless of which branch has a workflow definition. Mattered while `v2` was a side branch; now a non-issue since it's merged
-- ElevenLabs costs ~$0.50–$1.00/episode on the text-to-dialogue API; actual credits-per-episode seen during trial: ~1500 for 15 games
+- Pipeline stages: ESPN scraping → prompt assembly → LLM transcript → OpenAI TTS audio → RSS publish → S3 archive
+- Two hosts: Abe (`echo` voice) and Bailey (`nova` voice) — OpenAI TTS fixed presets stored in `config.toml`. No voice drift across chunks; the `AUDIO_SEED` knob that v2 needed for ElevenLabs is gone
+- `config.toml` at repo root holds all non-secret tunables: `[llm]`, `[audio]`, `[audio.voices]`, `[rss]`, `[s3]`, `[data]`. `.env` has 4 keys only (OpenAI, Gemini, 2× AWS)
+- **OpenAI TTS does not support bracket cues or SSML** — only the `instructions=` parameter for voice direction. Don't re-introduce `[laughs]` / `[sighs]` tags in any prompt; they'll leak into audio as spoken words
+- Cost: OpenAI `gpt-4o-mini-tts` ≈ $0.015/min audio + $0.60/1M input tokens → ~$0.23/episode, ~$7/month for daily cron
+- Quirk worth remembering: **GitHub Actions scheduled workflows run from the default branch** — cron triggers always read the workflow file from `main`
 - Runtime dependency: pydub needs `ffmpeg` for MP3 decode/encode. Installed on the runner via the workflow; locally via `apt install ffmpeg`
-- Supports swappable AI providers: OpenAI (default), Gemini, Claude
-- Test suite: 85 passing (up from 68 pre-v2), with new fixtures for the ESPN standings parser
+- Supports swappable AI providers for transcript: OpenAI (default), Gemini, Claude
+- Test suite: 90 passing
 - Public RSS feed at plai-ball.com
